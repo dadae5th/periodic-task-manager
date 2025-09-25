@@ -42,7 +42,18 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
         *,
         users (email, name)
       `)
-      .eq('email_enabled', true)
+      .eq('email_enabled', true) as { data: Array<{
+        id: string
+        user_id: string
+        email_enabled: boolean
+        email_time: string
+        reminder_hours: number
+        weekend_notifications: boolean
+        users: {
+          email: string
+          name: string
+        }
+      }> | null, error: any }
 
     if (settingsError) {
       console.error('알림 설정 조회 실패:', settingsError)
@@ -189,12 +200,13 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
 
     // 8. 로그 저장
     try {
-      await supabaseAdmin
+      await (supabaseAdmin as any)
         .from('cron_logs')
         .insert([{
           type: 'daily_email',
           executed_at: new Date().toISOString(),
           execution_time_ms: Date.now() - startTime,
+          success: true,
           total_users: usersToNotify.length,
           success_count: successCount,
           fail_count: failCount,
@@ -231,7 +243,7 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
     
     // 오류 로그 저장
     try {
-      await supabaseAdmin
+      await (supabaseAdmin as any)
         .from('cron_logs')
         .insert([{
           type: 'daily_email',

@@ -38,7 +38,7 @@ export default function TestPage() {
     } catch (error) {
       console.error('API 호출 실패:', error)
       alert('API 호출 중 오류가 발생했습니다.')
-      setResult({ error: error.message })
+      setResult({ error: error instanceof Error ? error.message : '알 수 없는 오류' })
     } finally {
       setLoading(false)
     }
@@ -54,7 +54,7 @@ export default function TestPage() {
       setResult(data)
     } catch (error) {
       console.error('Tasks API 호출 실패:', error)
-      setResult({ error: error.message })
+      setResult({ error: error instanceof Error ? error.message : '알 수 없는 오류' })
     } finally {
       setLoading(false)
     }
@@ -90,7 +90,7 @@ export default function TestPage() {
       }
     } catch (error) {
       console.error('업무 생성 실패:', error)
-      setResult({ error: error.message })
+      setResult({ error: error instanceof Error ? error.message : '알 수 없는 오류' })
     } finally {
       setLoading(false)
     }

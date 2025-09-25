@@ -112,17 +112,16 @@ async function handleSendDaily(req: NextApiRequest, res: NextApiResponse) {
     // 발송 로그 저장 (선택사항)
     if (!test_mode) {
       try {
-        await supabaseAdmin
+        await (supabaseAdmin as any)
           .from('email_logs')
           .insert([{
+            recipient: recipients.join(','),
+            subject: '일일 업무 알림',
             type: 'daily_tasks',
-            recipients: recipients,
-            success_count: successCount,
-            fail_count: failCount,
-            today_tasks_count: todayTasks.length,
-            overdue_tasks_count: overdueTasks.length,
-            sent_at: new Date().toISOString(),
-            results: results
+            success: successCount > 0,
+            task_count: todayTasks.length,
+            overdue_count: overdueTasks.length,
+            sent_at: new Date().toISOString()
           }])
       } catch (logError) {
         console.error('이메일 로그 저장 실패:', logError)

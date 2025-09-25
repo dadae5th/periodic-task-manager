@@ -111,6 +111,88 @@ export interface Database {
           weekend_notifications?: boolean
         }
       }
+      cron_logs: {
+        Row: {
+          id: string
+          type: string
+          executed_at: string
+          execution_time_ms: number
+          success: boolean
+          error: string | null
+          total_users: number | null
+          success_count: number | null
+          fail_count: number | null
+          skipped_count: number | null
+          today_tasks_count: number | null
+          overdue_tasks_count: number | null
+          results: Json | null
+        }
+        Insert: {
+          id?: string
+          type: string
+          executed_at?: string
+          execution_time_ms: number
+          success?: boolean
+          error?: string | null
+          total_users?: number | null
+          success_count?: number | null
+          fail_count?: number | null
+          skipped_count?: number | null
+          today_tasks_count?: number | null
+          overdue_tasks_count?: number | null
+          results?: Json | null
+        }
+        Update: {
+          id?: string
+          type?: string
+          executed_at?: string
+          execution_time_ms?: number
+          success?: boolean
+          error?: string | null
+          total_users?: number | null
+          success_count?: number | null
+          fail_count?: number | null
+          skipped_count?: number | null
+          today_tasks_count?: number | null
+          overdue_tags_count?: number | null
+          results?: Json | null
+        }
+      }
+      email_logs: {
+        Row: {
+          id: string
+          recipient: string
+          subject: string
+          type: string
+          sent_at: string
+          success: boolean
+          error: string | null
+          task_count: number | null
+          overdue_count: number | null
+        }
+        Insert: {
+          id?: string
+          recipient: string
+          subject: string
+          type: string
+          sent_at?: string
+          success?: boolean
+          error?: string | null
+          task_count?: number | null
+          overdue_count?: number | null
+        }
+        Update: {
+          id?: string
+          recipient?: string
+          subject?: string
+          type?: string
+          sent_at?: string
+          success?: boolean
+          error?: string | null
+          task_count?: number | null
+          overdue_count?: number | null
+        }
+      }
     }
     Views: {
       [_ in never]: never

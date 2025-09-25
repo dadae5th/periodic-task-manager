@@ -60,7 +60,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
     query = query.range(from, to)
 
-    const { data: tasks, error, count } = await query
+    const { data: tasks, error, count } = await (query as any)
 
     if (error) {
       console.error('업무 조회 실패:', error)
@@ -76,7 +76,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
 
-      filteredTasks = filteredTasks.filter(task => {
+      filteredTasks = filteredTasks.filter((task: any) => {
         if (task.completed) return false
         
         const dueDate = new Date(task.due_date)
@@ -136,7 +136,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       completed: false,
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from('tasks')
       .insert([newTask])
       .select()

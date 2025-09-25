@@ -24,7 +24,7 @@ class EmailService {
       throw new Error('이메일 설정이 환경 변수에 없습니다.')
     }
 
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
       service: this.config.service,
       auth: {
         user: this.config.user,

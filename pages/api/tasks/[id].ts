@@ -82,7 +82,7 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse, id: string) 
     if (due_date !== undefined) updates.due_date = due_date
     if (completed !== undefined) updates.completed = completed
 
-    const { data: task, error } = await supabaseAdmin
+    const { data: task, error } = await (supabaseAdmin as any)
       .from('tasks')
       .update(updates)
       .eq('id', id)
@@ -119,7 +119,7 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse, id: string) 
 async function handleDelete(req: NextApiRequest, res: NextApiResponse, id: string) {
   try {
     // 먼저 업무가 존재하는지 확인
-    const { data: existingTask, error: fetchError } = await supabaseAdmin
+    const { data: existingTask, error: fetchError } = await (supabaseAdmin as any)
       .from('tasks')
       .select('id, title')
       .eq('id', id)
@@ -139,7 +139,7 @@ async function handleDelete(req: NextApiRequest, res: NextApiResponse, id: strin
     }
 
     // 관련된 완료 기록도 함께 삭제
-    const { error: completionsError } = await supabaseAdmin
+    const { error: completionsError } = await (supabaseAdmin as any)
       .from('task_completions')
       .delete()
       .eq('task_id', id)
@@ -150,7 +150,7 @@ async function handleDelete(req: NextApiRequest, res: NextApiResponse, id: strin
     }
 
     // 업무 삭제
-    const { error: deleteError } = await supabaseAdmin
+    const { error: deleteError } = await (supabaseAdmin as any)
       .from('tasks')
       .delete()
       .eq('id', id)

@@ -39,7 +39,7 @@ async function handleComplete(req: NextApiRequest, res: NextApiResponse, id: str
     }
 
     // 먼저 업무 정보 조회
-    const { data: task, error: fetchError } = await supabaseAdmin
+    const { data: task, error: fetchError } = await (supabaseAdmin as any)
       .from('tasks')
       .select('*')
       .eq('id', id)
@@ -69,7 +69,7 @@ async function handleComplete(req: NextApiRequest, res: NextApiResponse, id: str
     // 트랜잭션 시작 (Supabase에서는 RPC를 사용하거나 여러 작업을 순차적으로 수행)
     
     // 1. 완료 기록 추가
-    const { data: completion, error: completionError } = await supabaseAdmin
+    const { data: completion, error: completionError } = await (supabaseAdmin as any)
       .from('task_completions')
       .insert([{
         task_id: id,
@@ -99,7 +99,7 @@ async function handleComplete(req: NextApiRequest, res: NextApiResponse, id: str
       nextDueDate = task.due_date
     }
 
-    const { data: updatedTask, error: updateError } = await supabaseAdmin
+    const { data: updatedTask, error: updateError } = await (supabaseAdmin as any)
       .from('tasks')
       .update({
         completed: task.frequency === 'daily' || task.frequency === 'weekly' || task.frequency === 'monthly' ? false : true,
@@ -114,7 +114,7 @@ async function handleComplete(req: NextApiRequest, res: NextApiResponse, id: str
       console.error('업무 업데이트 실패:', updateError)
       
       // 롤백: 완료 기록 삭제
-      await supabaseAdmin
+      await (supabaseAdmin as any)
         .from('task_completions')
         .delete()
         .eq('id', completion.id)
