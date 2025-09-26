@@ -180,6 +180,90 @@ export default function TestPage() {
     }
   }
 
+  const testEmailConnection = async () => {
+    setLoading(true)
+    setResult(null)
+
+    try {
+      const response = await fetch('/api/email/test-connection', {
+        method: 'GET'
+      })
+      
+      const text = await response.text()
+      console.log('Email connection test response:', { status: response.status, text })
+      
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch (parseError) {
+        setResult({ 
+          error: '이메일 연결 테스트 JSON 파싱 실패', 
+          response_status: response.status,
+          response_text: text.substring(0, 500) + (text.length > 500 ? '...' : ''),
+          parse_error: parseError instanceof Error ? parseError.message : '알 수 없는 파싱 오류'
+        })
+        return
+      }
+      
+      setResult(data)
+    } catch (error) {
+      console.error('이메일 연결 테스트 실패:', error)
+      setResult({ error: error instanceof Error ? error.message : '알 수 없는 오류' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const sendActualTestEmail = async () => {
+    if (!emailRecipient) {
+      alert('테스트 이메일을 받을 주소를 입력해주세요.')
+      return
+    }
+
+    setLoading(true)
+    setResult(null)
+
+    try {
+      const response = await fetch('/api/email/test-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          send_test_email: true,
+          test_recipient: emailRecipient
+        })
+      })
+      
+      const text = await response.text()
+      console.log('Test email send response:', { status: response.status, text })
+      
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch (parseError) {
+        setResult({ 
+          error: '테스트 이메일 발송 JSON 파싱 실패', 
+          response_status: response.status,
+          response_text: text.substring(0, 500) + (text.length > 500 ? '...' : ''),
+          parse_error: parseError instanceof Error ? parseError.message : '알 수 없는 파싱 오류'
+        })
+        return
+      }
+      
+      setResult(data)
+      
+      if (data.success) {
+        alert('테스트 이메일이 발송되었습니다! 받은편지함을 확인해주세요.')
+      }
+    } catch (error) {
+      console.error('테스트 이메일 발송 실패:', error)
+      setResult({ error: error instanceof Error ? error.message : '알 수 없는 오류' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <>
       <Head>
@@ -207,8 +291,8 @@ export default function TestPage() {
               />
             </div>
 
-            {/* 테스트 버튼들 */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            {/* 테스트 버튼들 - 첫 번째 줄 */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
               <button
                 onClick={testTasksAPI}
                 disabled={loading}
@@ -247,6 +331,25 @@ export default function TestPage() {
                 className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
               >
                 🐛 디버그 체크
+              </button>
+            </div>
+
+            {/* 이메일 테스트 버튼들 - 두 번째 줄 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <button
+                onClick={testEmailConnection}
+                disabled={loading}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+              >
+                📨 이메일 연결 테스트
+              </button>
+
+              <button
+                onClick={sendActualTestEmail}
+                disabled={loading || !emailRecipient}
+                className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:opacity-50"
+              >
+                📮 실제 테스트 이메일 발송
               </button>
             </div>
 
