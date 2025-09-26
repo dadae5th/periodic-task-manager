@@ -73,14 +73,26 @@ export default function Dashboard() {
         const taskList = tasksResult.data?.tasks || []
         setTasks(taskList)
         
-        // 통계 계산
+        // 통계 계산을 위해 완료 기록도 가져오기
+        const completionsResponse = await fetch('/api/completions/today', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+        
+        let completedToday = 0
+        if (completionsResponse.ok) {
+          const completionsResult = await completionsResponse.json()
+          if (completionsResult.success) {
+            completedToday = completionsResult.data?.count || 0
+          }
+        }
+        
+        // 기본 통계 계산
         const now = new Date()
-        const today = now.toDateString()
         
         const totalTasks = taskList.length
-        const completedToday = taskList.filter((task: Task) => 
-          task.completed && new Date(task.updated_at).toDateString() === today
-        ).length
         const overdueTasks = taskList.filter((task: Task) => 
           !task.completed && new Date(task.due_date) < now
         ).length
