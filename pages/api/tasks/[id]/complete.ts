@@ -17,12 +17,99 @@ export default async function handler(
     )
   }
 
-  if (method !== 'POST') {
-    res.setHeader('Allow', ['POST'])
+  if (method === 'POST') {
+    return handleComplete(req, res, id)
+  } else if (method === 'GET') {
+    return handleCompleteFromEmail(req, res, id)
+  } else {
+    res.setHeader('Allow', ['GET', 'POST'])
     return res.status(405).json(createApiResponse(false, null, '허용되지 않는 메서드'))
   }
+}
 
-  return handleComplete(req, res, id)
+/**
+ * 이메일에서 GET 요청으로 완료 처리
+ */
+async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse, id: string) {
+  try {
+    const { completed_by, notify_email } = req.query
+
+    // 먼저 업무 정보 조회
+    const { data: task, error: fetchError } = await (supabaseAdmin as any)
+      .from('tasks')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) {
+      if (fetchError.code === 'PGRST116') {
+        // 업무를 찾을 수 없는 경우 대시보드로 리다이렉트
+        return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?error=task_not_found`)
+      }
+      
+      console.error('업무 조회 실패:', fetchError)
+      return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?error=fetch_failed`)
+    }
+
+    if (task.completed) {
+      // 이미 완료된 업무인 경우 대시보드로 리다이렉트
+      return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?message=already_completed`)
+    }
+
+    const completedAt = new Date().toISOString()
+    const completedBy = completed_by || task.assignee
+
+    // 완료 기록 추가
+    const { data: completion, error: completionError } = await (supabaseAdmin as any)
+      .from('task_completions')
+      .insert([{
+        task_id: id,
+        completed_by: completedBy,
+        completed_at: completedAt
+      }])
+      .select()
+      .single()
+
+    if (completionError) {
+      console.error('완료 기록 생성 실패:', completionError)
+      return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?error=completion_failed`)
+    }
+
+    // 업무 상태 업데이트 및 다음 마감일 계산
+    let nextDueDate: string
+
+    if (task.frequency === 'daily' || task.frequency === 'weekly' || task.frequency === 'monthly') {
+      const nextDate = TaskScheduler.getNextScheduledDate(task, new Date())
+      nextDueDate = nextDate.toISOString().split('T')[0]
+    } else {
+      nextDueDate = task.due_date
+    }
+
+    const { error: updateError } = await (supabaseAdmin as any)
+      .from('tasks')
+      .update({
+        completed: task.frequency === 'daily' || task.frequency === 'weekly' || task.frequency === 'monthly' ? false : true,
+        due_date: nextDueDate,
+        updated_at: completedAt
+      })
+      .eq('id', id)
+
+    if (updateError) {
+      console.error('업무 업데이트 실패:', updateError)
+      await (supabaseAdmin as any)
+        .from('task_completions')
+        .delete()
+        .eq('id', completion.id)
+      
+      return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?error=update_failed`)
+    }
+
+    // 성공 시 대시보드로 리다이렉트
+    return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?message=task_completed&task=${encodeURIComponent(task.title)}`)
+  } catch (error) {
+    console.error('업무 완료 처리 중 오류:', error)
+    return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?error=server_error`)
+  }
 }
 
 /**
