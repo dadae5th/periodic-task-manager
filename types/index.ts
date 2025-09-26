@@ -80,6 +80,8 @@ export interface EmailResult {
   messageId?: string
   error?: string
   recipient: string
+  mockMode?: boolean
+  originalError?: string
 }
 
 // 필터 및 정렬 옵션
