@@ -1,6 +1,6 @@
 {
   "functions": {
-    "pages/api/cron/daily-email.js": {
+    "pages/api/**/*.ts": {
       "maxDuration": 300
     }
   },
