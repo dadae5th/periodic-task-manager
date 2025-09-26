@@ -8,6 +8,7 @@ interface DashboardStats {
   overdue_tasks: number
   pending_tasks: number
   completion_rate: number
+  today_tasks: number
 }
 
 // 유틸리티 함수들
@@ -42,7 +43,8 @@ export default function Dashboard() {
     completed_today: 0,
     overdue_tasks: 0,
     pending_tasks: 0,
-    completion_rate: 0
+    completion_rate: 0,
+    today_tasks: 0
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -112,7 +114,8 @@ export default function Dashboard() {
           completed_today: completedToday,
           overdue_tasks: overdueTasks,
           pending_tasks: pendingTasks,
-          completion_rate: completionRate
+          completion_rate: completionRate,
+          today_tasks: todayTasks
         })
       } else {
         console.error('API response not successful:', tasksResult)
@@ -264,8 +267,8 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">전체 업무</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.total_tasks}</p>
+                    <p className="text-sm font-medium text-gray-500">오늘 할 업무</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.today_tasks}</p>
                   </div>
                 </div>
               </div>
@@ -306,7 +309,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">완료율</p>
+                    <p className="text-sm font-medium text-gray-500">오늘 완료율</p>
                     <p className="text-2xl font-bold text-gray-900">{stats.completion_rate}%</p>
                   </div>
                 </div>
