@@ -294,6 +294,15 @@ export default function Dashboard() {
   // 초기 데이터 로딩
   useEffect(() => {
     loadInitialData()
+
+    // URL에서 완료된 업무 수 확인
+    const urlParams = new URLSearchParams(window.location.search)
+    const completedCount = urlParams.get('completed')
+    if (completedCount) {
+      alert(`🎉 ${completedCount}개 업무가 성공적으로 완료되었습니다!`)
+      // URL에서 파라미터 제거
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
   }, [])
 
   return (
