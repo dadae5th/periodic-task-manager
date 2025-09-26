@@ -12,6 +12,14 @@ interface DashboardStats {
   today_completion_rate: number
 }
 
+interface NewTask {
+  title: string
+  description: string
+  assignee: string
+  frequency: 'daily' | 'weekly' | 'monthly'
+  due_date: string
+}
+
 // 유틸리티 함수들
 const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('ko-KR')
@@ -50,6 +58,15 @@ export default function Dashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [newTask, setNewTask] = useState<NewTask>({
+    title: '',
+    description: '',
+    assignee: 'bae.jae.kwon@drbworld.com',
+    frequency: 'daily',
+    due_date: new Date().toISOString().split('T')[0]
+  })
 
   // 초기 데이터 로딩
   const loadInitialData = async () => {
@@ -213,6 +230,65 @@ export default function Dashboard() {
       console.error('업무 삭제 실패:', error)
       alert('업무 삭제 중 오류가 발생했습니다.')
     }
+  }
+
+  // 업무 추가
+  const addTask = async () => {
+    if (!newTask.title.trim()) {
+      alert('업무 제목을 입력해주세요.')
+      return
+    }
+
+    if (!newTask.assignee.trim()) {
+      alert('담당자를 입력해주세요.')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newTask)
+      })
+
+      const result: ApiResponse = await response.json()
+      
+      if (result.success) {
+        // 폼 초기화
+        setNewTask({
+          title: '',
+          description: '',
+          assignee: 'bae.jae.kwon@drbworld.com',
+          frequency: 'daily',
+          due_date: new Date().toISOString().split('T')[0]
+        })
+        setShowAddModal(false)
+        await loadInitialData()
+        alert('업무가 성공적으로 추가되었습니다!')
+      } else {
+        alert(`업무 추가 실패: ${result.error || result.message}`)
+      }
+    } catch (error) {
+      console.error('업무 추가 실패:', error)
+      alert('업무 추가 중 오류가 발생했습니다.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // 모달 닫기
+  const closeAddModal = () => {
+    setShowAddModal(false)
+    setNewTask({
+      title: '',
+      description: '',
+      assignee: 'bae.jae.kwon@drbworld.com',
+      frequency: 'daily',
+      due_date: new Date().toISOString().split('T')[0]
+    })
   }
 
   // 초기 데이터 로딩
@@ -380,7 +456,7 @@ export default function Dashboard() {
                   </button>
                   
                   <button
-                    onClick={() => window.location.href = '/'}
+                    onClick={() => setShowAddModal(true)}
                     className="px-4 py-2 bg-green-500 text-white rounded-md text-sm font-medium hover:bg-green-600"
                   >
                     + 업무 추가
@@ -473,6 +549,127 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* 업무 추가 모달 */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">새 업무 추가</h3>
+                  <button
+                    onClick={closeAddModal}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+
+                <form onSubmit={(e) => { e.preventDefault(); addTask(); }} className="space-y-4">
+                  {/* 업무 제목 */}
+                  <div>
+                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                      업무 제목 *
+                    </label>
+                    <input
+                      type="text"
+                      id="title"
+                      value={newTask.title}
+                      onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="예: 일일 보고서 작성"
+                      required
+                    />
+                  </div>
+
+                  {/* 업무 설명 */}
+                  <div>
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                      업무 설명
+                    </label>
+                    <textarea
+                      id="description"
+                      value={newTask.description}
+                      onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="업무에 대한 상세 설명을 입력하세요"
+                    />
+                  </div>
+
+                  {/* 담당자 */}
+                  <div>
+                    <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 mb-1">
+                      담당자 *
+                    </label>
+                    <input
+                      type="text"
+                      id="assignee"
+                      value={newTask.assignee}
+                      onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="이름 또는 이메일 주소"
+                      required
+                    />
+                  </div>
+
+                  {/* 주기 */}
+                  <div>
+                    <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-1">
+                      반복 주기
+                    </label>
+                    <select
+                      id="frequency"
+                      value={newTask.frequency}
+                      onChange={(e) => setNewTask({ ...newTask, frequency: e.target.value as 'daily' | 'weekly' | 'monthly' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="daily">매일</option>
+                      <option value="weekly">매주</option>
+                      <option value="monthly">매월</option>
+                    </select>
+                  </div>
+
+                  {/* 마감일 */}
+                  <div>
+                    <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 mb-1">
+                      첫 번째 마감일 *
+                    </label>
+                    <input
+                      type="date"
+                      id="due_date"
+                      value={newTask.due_date}
+                      onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  {/* 버튼 */}
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={closeAddModal}
+                      disabled={isSubmitting}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 disabled:opacity-50"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !newTask.title.trim() || !newTask.assignee.trim()}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-500 border border-transparent rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? '추가 중...' : '업무 추가'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )

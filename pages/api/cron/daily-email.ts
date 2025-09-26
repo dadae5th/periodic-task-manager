@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { createApiResponse, getToday } from '@/lib/utils'
 import { getEmailService } from '@/lib/email'
 import { getTodayTasksAndOverdue } from '@/lib/scheduler'
+import { Task } from '@/types'
 
 export default async function handler(
   req: NextApiRequest,
@@ -35,69 +36,17 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
   try {
     console.log(`[CRON] 일일 이메일 발송 시작: ${new Date().toLocaleString('ko-KR')}`)
 
-    // 1. 알림 설정이 활성화된 사용자들 조회
-    const { data: notificationSettings, error: settingsError } = await supabaseAdmin
-      .from('notification_settings')
-      .select(`
-        *,
-        users (email, name)
-      `)
-      .eq('email_enabled', true) as { data: Array<{
-        id: string
-        user_id: string
-        email_enabled: boolean
-        email_time: string
-        reminder_hours: number
-        weekend_notifications: boolean
-        users: {
-          email: string
-          name: string
-        }
-      }> | null, error: any }
-
-    if (settingsError) {
-      console.error('알림 설정 조회 실패:', settingsError)
-      return res.status(500).json(
-        createApiResponse(false, null, '알림 설정 조회에 실패했습니다.', settingsError.message)
-      )
-    }
-
-    if (!notificationSettings || notificationSettings.length === 0) {
-      console.log('[CRON] 이메일 알림이 활성화된 사용자가 없습니다.')
-      return res.status(200).json(
-        createApiResponse(true, { message: '발송할 사용자가 없습니다.' })
-      )
-    }
-
-    // 2. 현재 시간 확인 (한국 시간 기준)
+    // 1. 현재 시간 확인 (한국 시간 기준)
     const now = getToday()
     const currentHour = now.getHours()
     const currentMinute = now.getMinutes()
     const currentTime = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`
 
-    // 3. 현재 시간에 이메일을 받을 사용자 필터링
-    const usersToNotify = notificationSettings.filter(setting => {
-      // 주말 알림 설정 확인
-      const dayOfWeek = now.getDay() // 0: 일요일, 6: 토요일
-      if ((dayOfWeek === 0 || dayOfWeek === 6) && !setting.weekend_notifications) {
-        return false
-      }
+    // 2. 주말 체크 (필요시 주말 발송 제한 가능)
+    const dayOfWeek = now.getDay() // 0: 일요일, 6: 토요일
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 
-      // 시간 확인 (정확한 시간 매칭 또는 근사치)
-      const [settingHour, settingMinute] = setting.email_time.split(':').map(Number)
-      return settingHour === currentHour && Math.abs(settingMinute - currentMinute) <= 5
-    })
-
-    if (usersToNotify.length === 0) {
-      console.log(`[CRON] ${currentTime}에 이메일을 받을 사용자가 없습니다.`)
-      return res.status(200).json(
-        createApiResponse(true, { 
-          message: `${currentTime}에 발송할 사용자가 없습니다.`,
-          current_time: currentTime,
-          total_users: notificationSettings.length
-        })
-      )
-    }
+    console.log(`[CRON] 이메일 발송 시작 - 시간: ${currentTime}, 주말: ${isWeekend ? 'Yes' : 'No'}`)
 
     // 4. 모든 업무 조회
     const { data: allTasks, error: tasksError } = await supabaseAdmin
@@ -115,7 +64,41 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
     const tasks = allTasks || []
     const { todayTasks, overdueTasks } = getTodayTasksAndOverdue(tasks)
 
-    // 5. 이메일 서비스 초기화 및 연결 테스트
+    // 3. 발송할 업무가 없는 경우 조기 종료
+    if (todayTasks.length === 0 && overdueTasks.length === 0) {
+      console.log('[CRON] 발송할 업무가 없습니다.')
+      return res.status(200).json(
+        createApiResponse(true, { 
+          message: '오늘 해야할 일과 지연된 업무가 없습니다.',
+          current_time: currentTime,
+          today_tasks: 0,
+          overdue_tasks: 0
+        })
+      )
+    }
+
+    // 4. 담당자별로 업무 그룹핑
+    const tasksByAssignee = new Map<string, { todayTasks: Task[], overdueTasks: Task[] }>()
+    
+    // 오늘 해야할 일을 담당자별로 분류
+    todayTasks.forEach(task => {
+      const assignee = task.assignee
+      if (!tasksByAssignee.has(assignee)) {
+        tasksByAssignee.set(assignee, { todayTasks: [], overdueTasks: [] })
+      }
+      tasksByAssignee.get(assignee)!.todayTasks.push(task)
+    })
+    
+    // 지연된 업무를 담당자별로 분류
+    overdueTasks.forEach(task => {
+      const assignee = task.assignee
+      if (!tasksByAssignee.has(assignee)) {
+        tasksByAssignee.set(assignee, { todayTasks: [], overdueTasks: [] })
+      }
+      tasksByAssignee.get(assignee)!.overdueTasks.push(task)
+    })
+
+    // 6. 이메일 서비스 초기화 및 연결 테스트
     const emailService = getEmailService()
     const isConnected = await emailService.testConnection()
     
@@ -126,52 +109,49 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
       )
     }
 
-    // 6. 각 사용자에게 이메일 발송
+    // 7. 담당자별로 이메일 발송 (직접 발송 방식)
     const results = []
+    const assigneeEmails = Array.from(tasksByAssignee.keys())
     
-    for (const userSetting of usersToNotify) {
-      const user = userSetting.users
-      if (!user || !user.email) {
-        console.error('사용자 정보가 없습니다:', userSetting.user_id)
+    for (const assigneeEmail of assigneeEmails) {
+      const assigneeTasks = tasksByAssignee.get(assigneeEmail)!
+      
+      // 이메일 주소가 유효한지 확인
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(assigneeEmail)) {
+        console.log(`[CRON] 유효하지 않은 이메일 주소: ${assigneeEmail} - 건너뜀`)
+        results.push({
+          user: assigneeEmail,
+          email: assigneeEmail,
+          success: false,
+          error: '유효하지 않은 이메일 주소'
+        })
         continue
       }
 
       try {
-        // 사용자별 업무 필터링
-        const userTodayTasks = todayTasks.filter(task => 
-          task.assignee === user.email || 
-          task.assignee === user.name || 
-          task.assignee === 'all'
-        )
-        
-        const userOverdueTasks = overdueTasks.filter(task => 
-          task.assignee === user.email || 
-          task.assignee === user.name || 
-          task.assignee === 'all'
-        )
-
-        // 업무가 있는 경우에만 이메일 발송 (또는 지연된 업무가 있는 경우)
-        if (userTodayTasks.length > 0 || userOverdueTasks.length > 0) {
+        // 업무가 있는 경우에만 이메일 발송
+        if (assigneeTasks.todayTasks.length > 0 || assigneeTasks.overdueTasks.length > 0) {
           const result = await emailService.sendDailyTaskEmail(
-            user.email,
-            userTodayTasks,
-            userOverdueTasks
+            assigneeEmail,
+            assigneeTasks.todayTasks,
+            assigneeTasks.overdueTasks
           )
 
           results.push({
-            user: user.name || user.email,
-            email: user.email,
+            user: assigneeEmail,
+            email: assigneeEmail,
             ...result,
-            today_tasks: userTodayTasks.length,
-            overdue_tasks: userOverdueTasks.length
+            today_tasks: assigneeTasks.todayTasks.length,
+            overdue_tasks: assigneeTasks.overdueTasks.length
           })
 
-          console.log(`[CRON] 이메일 발송: ${user.email} - ${result.success ? '성공' : '실패'}`)
+          console.log(`[CRON] 담당자 이메일 발송: ${assigneeEmail} - ${result.success ? '성공' : '실패'} (오늘: ${assigneeTasks.todayTasks.length}, 지연: ${assigneeTasks.overdueTasks.length})`)
         } else {
-          console.log(`[CRON] 업무 없음: ${user.email} - 이메일 발송 생략`)
+          console.log(`[CRON] 업무 없음: ${assigneeEmail} - 이메일 발송 생략`)
           results.push({
-            user: user.name || user.email,
-            email: user.email,
+            user: assigneeEmail,
+            email: assigneeEmail,
             success: true,
             skipped: true,
             reason: '발송할 업무 없음'
@@ -179,26 +159,27 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
         }
 
         // API 제한 방지를 위한 딜레이
-        if (results.length < usersToNotify.length) {
+        if (results.length < tasksByAssignee.size) {
           await new Promise(resolve => setTimeout(resolve, 2000)) // 2초 딜레이
         }
       } catch (error) {
-        console.error(`[CRON] ${user.email} 이메일 발송 실패:`, error)
+        console.error(`[CRON] ${assigneeEmail} 이메일 발송 실패:`, error)
         results.push({
-          user: user.name || user.email,
-          email: user.email,
+          user: assigneeEmail,
+          email: assigneeEmail,
           success: false,
           error: error instanceof Error ? error.message : '알 수 없는 오류'
         })
       }
     }
 
-    // 7. 결과 집계
+    // 8. 결과 집계
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
     const skippedCount = results.filter(r => r.skipped).length
+    const totalAssignees = assigneeEmails.length
 
-    // 8. 로그 저장
+    // 9. 로그 저장
     try {
       await (supabaseAdmin as any)
         .from('cron_logs')
@@ -207,7 +188,7 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
           executed_at: new Date().toISOString(),
           execution_time_ms: Date.now() - startTime,
           success: true,
-          total_users: usersToNotify.length,
+          total_users: totalAssignees,
           success_count: successCount,
           fail_count: failCount,
           skipped_count: skippedCount,
@@ -220,14 +201,14 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const executionTime = Date.now() - startTime
-    console.log(`[CRON] 일일 이메일 발송 완료: ${executionTime}ms, 성공: ${successCount}, 실패: ${failCount}, 생략: ${skippedCount}`)
+    console.log(`[CRON] 담당자별 이메일 발송 완료: ${executionTime}ms, 담당자: ${totalAssignees}명, 성공: ${successCount}, 실패: ${failCount}, 생략: ${skippedCount}`)
 
     return res.status(200).json(
       createApiResponse(true, {
         execution_time_ms: executionTime,
         current_time: currentTime,
         summary: {
-          total_users: usersToNotify.length,
+          total_assignees: totalAssignees,
           success_count: successCount,
           fail_count: failCount,
           skipped_count: skippedCount,
@@ -235,7 +216,7 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
           overdue_tasks: overdueTasks.length
         },
         results: results
-      }, `Cron 작업 완료: ${successCount}/${usersToNotify.length} 성공`)
+      }, `Cron 작업 완료: ${successCount}/${totalAssignees} 담당자에게 발송 성공`)
     )
   } catch (error) {
     const executionTime = Date.now() - startTime
