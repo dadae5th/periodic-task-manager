@@ -50,7 +50,25 @@ export default function TestPage() {
 
     try {
       const response = await fetch('/api/tasks')
-      const data = await response.json()
+      console.log('Response status:', response.status)
+      console.log('Response headers:', response.headers)
+      
+      const text = await response.text()
+      console.log('Response text:', text)
+      
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch (parseError) {
+        setResult({ 
+          error: 'JSON 파싱 실패', 
+          response_status: response.status,
+          response_text: text.substring(0, 500) + (text.length > 500 ? '...' : ''),
+          parse_error: parseError instanceof Error ? parseError.message : '알 수 없는 파싱 오류'
+        })
+        return
+      }
+      
       setResult(data)
     } catch (error) {
       console.error('Tasks API 호출 실패:', error)
