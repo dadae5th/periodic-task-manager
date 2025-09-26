@@ -97,7 +97,15 @@ export default function Dashboard() {
           !task.completed && new Date(task.due_date) < now
         ).length
         const pendingTasks = taskList.filter((task: Task) => !task.completed).length
-        const completionRate = totalTasks > 0 ? Math.round((taskList.filter((task: Task) => task.completed).length / totalTasks) * 100) : 0
+        
+        // 완료율 계산: 오늘 완료된 업무 / 오늘 해야 할 업무 기준으로 계산
+        const todayTasks = taskList.filter((task: Task) => {
+          const taskDate = new Date(task.due_date).toDateString()
+          const today = now.toDateString()
+          return taskDate === today
+        }).length
+        
+        const completionRate = todayTasks > 0 ? Math.round((completedToday / todayTasks) * 100) : 0
         
         setStats({
           total_tasks: totalTasks,
