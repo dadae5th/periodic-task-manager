@@ -67,12 +67,67 @@ export default async function handler(
       }
     }
 
-    // POST 요청 처리 (단순화)
+    // POST 요청 처리 - 새 업무 생성
     if (req.method === 'POST') {
-      return res.status(201).json({
-        success: true,
-        message: 'POST method not implemented yet'
-      })
+      console.log('Creating new task:', req.body)
+      
+      try {
+        const { title, description, assignee, frequency, frequency_details, due_date } = req.body
+
+        // 필수 필드 검증
+        if (!title || !assignee || !frequency || !due_date) {
+          return res.status(400).json({
+            success: false,
+            error: '필수 필드가 누락되었습니다.',
+            required: ['title', 'assignee', 'frequency', 'due_date']
+          })
+        }
+
+        const newTask = {
+          title,
+          description: description || null,
+          assignee,
+          frequency,
+          frequency_details: frequency_details || {},
+          due_date,
+          completed: false,
+        }
+
+        console.log('Inserting task:', newTask)
+        const { data, error } = await (supabaseAdmin as any)
+          .from('tasks')
+          .insert(newTask)
+          .select('id, title, assignee, frequency, due_date')
+          .single()
+
+        if (error) {
+          console.error('Task creation error:', error)
+          return res.status(500).json({
+            success: false,
+            error: 'Task creation failed',
+            details: {
+              message: error.message,
+              code: error.code,
+              details: error.details
+            }
+          })
+        }
+
+        console.log('Task created successfully:', data)
+        return res.status(201).json({
+          success: true,
+          data: data,
+          message: '업무가 성공적으로 생성되었습니다.'
+        })
+
+      } catch (createError) {
+        console.error('Task creation exception:', createError)
+        return res.status(500).json({
+          success: false,
+          error: 'Task creation failed',
+          details: createError instanceof Error ? createError.message : 'Unknown error'
+        })
+      }
     }
 
     // 기타 메서드
