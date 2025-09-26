@@ -29,21 +29,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Gmail SMTP 설정
+    // Gmail SMTP 설정 - 여러 방법 시도
     console.log('Creating Gmail SMTP transporter...')
-    const transporter = nodemailer.createTransport({
+    
+    // 방법 1: Gmail 서비스 사용
+    let transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: emailUser,
         pass: emailPassword,
       },
-      // Gmail 특화 설정
-      secure: true,
-      port: 465,
     })
 
-    console.log('Testing connection...')
-    const connectionTest = await transporter.verify()
+    // 방법 1 실패시 방법 2: 직접 SMTP 설정
+    const tryAlternativeConfig = async () => {
+      console.log('Trying alternative SMTP configuration...')
+      return nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+          user: emailUser,
+          pass: emailPassword,
+        },
+        tls: {
+          rejectUnauthorized: false
+        }
+      })
+    }
+
+    console.log('Testing connection with method 1 (Gmail service)...')
+    let connectionTest = false
+    let connectionMethod = 'gmail-service'
+    
+    try {
+      connectionTest = await transporter.verify()
+    } catch (firstError) {
+      const firstErrorMsg = firstError instanceof Error ? firstError.message : 'Unknown error'
+      console.log('Method 1 failed, trying method 2 (Direct SMTP)...', firstErrorMsg)
+      
+      transporter = await tryAlternativeConfig()
+      connectionMethod = 'direct-smtp'
+      
+      try {
+        connectionTest = await transporter.verify()
+      } catch (secondError) {
+        const secondErrorMsg = secondError instanceof Error ? secondError.message : 'Unknown error'
+        console.log('Method 2 also failed:', secondErrorMsg)
+        throw secondError
+      }
+    }
     
     if (connectionTest) {
       console.log('Connection test successful')
@@ -119,6 +154,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         success: true,
         connection_test: true,
         message: '이메일 서비스 연결 성공',
+        connection_method: connectionMethod,
         config: {
           service: emailService,
           user: emailUser,
