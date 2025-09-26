@@ -52,11 +52,25 @@ export default function Dashboard() {
     setLoading(true)
     setError(null)
     try {
-      const tasksResponse = await fetch('/api/tasks')
+      console.log('Fetching tasks from API...')
+      const tasksResponse = await fetch('/api/tasks', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      console.log('API Response status:', tasksResponse.status)
+      
+      if (!tasksResponse.ok) {
+        throw new Error(`HTTP error! status: ${tasksResponse.status}`)
+      }
+      
       const tasksResult = await tasksResponse.json()
+      console.log('API Response data:', tasksResult)
       
       if (tasksResult.success) {
-        const taskList = tasksResult.data || []
+        const taskList = tasksResult.data?.tasks || []
         setTasks(taskList)
         
         // 통계 계산
@@ -81,11 +95,13 @@ export default function Dashboard() {
           completion_rate: completionRate
         })
       } else {
+        console.error('API response not successful:', tasksResult)
         setError(tasksResult.error || '데이터 로딩에 실패했습니다.')
       }
     } catch (error) {
       console.error('데이터 로딩 실패:', error)
-      setError('데이터 로딩 중 오류가 발생했습니다.')
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      setError(`데이터 로딩 중 오류가 발생했습니다: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
