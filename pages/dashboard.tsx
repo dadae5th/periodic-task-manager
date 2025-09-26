@@ -85,11 +85,28 @@ export default function Dashboard() {
           },
         })
         
+        // 오늘 업무 통계 가져오기
+        const todayStatsResponse = await fetch('/api/completions/today-stats', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+        
         let completedToday = 0
+        let accurateTodayCompletionRate = 0
+        
         if (completionsResponse.ok) {
           const completionsResult = await completionsResponse.json()
           if (completionsResult.success) {
             completedToday = completionsResult.data?.count || 0
+          }
+        }
+        
+        if (todayStatsResponse.ok) {
+          const todayStatsResult = await todayStatsResponse.json()
+          if (todayStatsResult.success) {
+            accurateTodayCompletionRate = todayStatsResult.data?.today_completion_rate || 0
           }
         }
         
@@ -121,8 +138,7 @@ export default function Dashboard() {
           return taskDate === today
         }).length
 
-        // 당일 완성율: 오늘 완료된 업무 / 오늘 마감인 업무
-        const todayCompletionRate = todayTasks > 0 ? Math.round((completedToday / todayTasks) * 100) : 0
+        // API에서 받은 정확한 당일 완성율 사용
         
         setStats({
           total_tasks: totalTasks,
@@ -131,7 +147,7 @@ export default function Dashboard() {
           pending_tasks: pendingTasks,
           completion_rate: completionRate,
           today_tasks: activeTasks,
-          today_completion_rate: todayCompletionRate
+          today_completion_rate: accurateTodayCompletionRate
         })
       } else {
         console.error('API response not successful:', tasksResult)
