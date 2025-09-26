@@ -147,6 +147,39 @@ export default function TestPage() {
     }
   }
 
+  const runDebugCheck = async () => {
+    setLoading(true)
+    setResult(null)
+
+    try {
+      const response = await fetch('/api/debug')
+      console.log('Debug API response status:', response.status)
+      
+      const text = await response.text()
+      console.log('Debug API response text:', text)
+      
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch (parseError) {
+        setResult({ 
+          error: '디버그 API JSON 파싱 실패', 
+          response_status: response.status,
+          response_text: text.substring(0, 500) + (text.length > 500 ? '...' : ''),
+          parse_error: parseError instanceof Error ? parseError.message : '알 수 없는 파싱 오류'
+        })
+        return
+      }
+      
+      setResult(data)
+    } catch (error) {
+      console.error('디버그 확인 실패:', error)
+      setResult({ error: error instanceof Error ? error.message : '알 수 없는 오류' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <>
       <Head>
@@ -175,7 +208,7 @@ export default function TestPage() {
             </div>
 
             {/* 테스트 버튼들 */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
               <button
                 onClick={testTasksAPI}
                 disabled={loading}
@@ -206,6 +239,14 @@ export default function TestPage() {
                 className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50"
               >
                 🔍 환경변수 확인
+              </button>
+
+              <button
+                onClick={runDebugCheck}
+                disabled={loading}
+                className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
+              >
+                🐛 디버그 체크
               </button>
             </div>
 
