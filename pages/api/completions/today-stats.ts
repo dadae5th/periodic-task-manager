@@ -59,11 +59,17 @@ export default async function handler(
     }
 
     // 2. 오늘 완료된 업무 중에서 오늘 마감인 업무들만 필터링
+    const todayStartStr = today.toISOString()
+    const tomorrowStartStr = tomorrow.toISOString()
+    
+    console.log('Filtering completions between:', todayStartStr, 'and', tomorrowStartStr)
+    console.log('Today task IDs to match:', todayTaskIds)
+    
     const { data: completions, error: completionsError } = await supabaseAdmin
       .from('task_completions')
       .select('id, task_id, completed_by, completed_at, tasks(title, due_date)')
-      .gte('completed_at', tomorrowStr.slice(0, 10) + 'T00:00:00')
-      .lt('completed_at', tomorrowStr)
+      .gte('completed_at', todayStartStr)
+      .lt('completed_at', tomorrowStartStr)
       .in('task_id', todayTaskIds)
 
     if (completionsError) {
