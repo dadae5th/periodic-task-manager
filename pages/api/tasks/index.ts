@@ -6,6 +6,9 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // UTF-8 인코딩 설정
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  
   console.log('Tasks API called:', new Date().toISOString(), req.method)
   
   try {
@@ -23,11 +26,11 @@ export default async function handler(
       
       try {
         // 단계별로 테스트
-        console.log('Step 1: Basic select with specific columns')
+        console.log('Step 1: Select all necessary columns')
         const { data, error } = await supabaseAdmin
           .from('tasks')
-          .select('id, title, assignee')
-          .limit(5)
+          .select('id, title, description, assignee, frequency, due_date, completed, created_at, updated_at')
+          .order('due_date', { ascending: true })
 
         console.log('Query result:', { hasData: !!data, dataLength: data?.length, hasError: !!error })
 
