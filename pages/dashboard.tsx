@@ -9,6 +9,7 @@ interface DashboardStats {
   pending_tasks: number
   completion_rate: number
   today_tasks: number
+  today_completion_rate: number
 }
 
 // 유틸리티 함수들
@@ -44,7 +45,8 @@ export default function Dashboard() {
     overdue_tasks: 0,
     pending_tasks: 0,
     completion_rate: 0,
-    today_tasks: 0
+    today_tasks: 0,
+    today_completion_rate: 0
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -118,6 +120,9 @@ export default function Dashboard() {
           const today = now.toDateString()
           return taskDate === today
         }).length
+
+        // 당일 완성율: 오늘 완료된 업무 / 오늘 마감인 업무
+        const todayCompletionRate = todayTasks > 0 ? Math.round((completedToday / todayTasks) * 100) : 0
         
         setStats({
           total_tasks: totalTasks,
@@ -125,7 +130,8 @@ export default function Dashboard() {
           overdue_tasks: overdueTasks,
           pending_tasks: pendingTasks,
           completion_rate: completionRate,
-          today_tasks: activeTasks
+          today_tasks: activeTasks,
+          today_completion_rate: todayCompletionRate
         })
       } else {
         console.error('API response not successful:', tasksResult)
@@ -268,7 +274,7 @@ export default function Dashboard() {
 
           {/* 통계 카드 */}
           {!loading && !error && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -321,6 +327,20 @@ export default function Dashboard() {
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-500">활동률</p>
                     <p className="text-2xl font-bold text-gray-900">{stats.completion_rate}%</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
+                      <span className="text-white text-sm font-medium">🎯</span>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">당일 완성율</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.today_completion_rate}%</p>
                   </div>
                 </div>
               </div>
