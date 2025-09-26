@@ -100,14 +100,24 @@ export default function Dashboard() {
         ).length
         const pendingTasks = taskList.filter((task: Task) => !task.completed).length
         
-        // 완료율 계산: 오늘 완료된 업무 / 오늘 해야 할 업무 기준으로 계산
+        // 오늘과 내일까지의 업무를 "현재 활성 업무"로 간주
+        const activeTasks = taskList.filter((task: Task) => {
+          const taskDate = new Date(task.due_date)
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+          const dayAfterTomorrow = new Date(today)
+          dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
+          return taskDate >= today && taskDate < dayAfterTomorrow
+        }).length
+        
+        // 완료율: 오늘 완료된 업무 / 현재 활성 업무 (최대 100%)
+        const completionRate = activeTasks > 0 ? Math.min(100, Math.round((completedToday / activeTasks) * 100)) : 0
+        
+        // 오늘 마감인 업무 개수 계산
         const todayTasks = taskList.filter((task: Task) => {
           const taskDate = new Date(task.due_date).toDateString()
           const today = now.toDateString()
           return taskDate === today
         }).length
-        
-        const completionRate = todayTasks > 0 ? Math.round((completedToday / todayTasks) * 100) : 0
         
         setStats({
           total_tasks: totalTasks,
@@ -115,7 +125,7 @@ export default function Dashboard() {
           overdue_tasks: overdueTasks,
           pending_tasks: pendingTasks,
           completion_rate: completionRate,
-          today_tasks: todayTasks
+          today_tasks: activeTasks
         })
       } else {
         console.error('API response not successful:', tasksResult)
@@ -267,7 +277,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">오늘 할 업무</p>
+                    <p className="text-sm font-medium text-gray-500">활성 업무</p>
                     <p className="text-2xl font-bold text-gray-900">{stats.today_tasks}</p>
                   </div>
                 </div>
@@ -309,7 +319,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">오늘 완료율</p>
+                    <p className="text-sm font-medium text-gray-500">활동률</p>
                     <p className="text-2xl font-bold text-gray-900">{stats.completion_rate}%</p>
                   </div>
                 </div>
