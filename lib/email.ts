@@ -53,7 +53,9 @@ class EmailService {
         }
       }
 
-      const htmlContent = this.generateDailyEmailHTML(tasks, overdueTasks)
+      // 개선된 HTML 템플릿 사용
+      const { generateEnhancedDailyEmailHTML } = require('./enhanced-email-template')
+      const htmlContent = generateEnhancedDailyEmailHTML(tasks, overdueTasks)
       const textContent = this.generateDailyEmailText(tasks, overdueTasks)
 
       const mailOptions = {
@@ -135,9 +137,12 @@ class EmailService {
   }
 
   /**
-   * 일일 업무 이메일 HTML 생성
+   * 일일 업무 이메일 HTML 생성 (개선된 버전)
    */
   private generateDailyEmailHTML(tasks: Task[], overdueTasks: Task[]): string {
+    // 개선된 템플릿 사용
+    const { generateEnhancedDailyEmailHTML } = require('./enhanced-email-template')
+    return generateEnhancedDailyEmailHTML(tasks, overdueTasks)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     
     return `
