@@ -30,6 +30,9 @@ class EmailService {
         user: this.config.user,
         pass: this.config.password,
       },
+      tls: {
+        rejectUnauthorized: false
+      }
     })
   }
 
@@ -53,9 +56,9 @@ class EmailService {
         }
       }
 
-      // 개선된 HTML 템플릿 사용
-      const { generateEnhancedDailyEmailHTML } = require('./enhanced-email-template')
-      const htmlContent = generateEnhancedDailyEmailHTML(tasks, overdueTasks)
+      // 이메일 친화적인 템플릿 사용 (JavaScript 없이 작동)
+      const { generateEmailFriendlyTemplate } = require('./email-friendly-template')
+      const htmlContent = generateEmailFriendlyTemplate(tasks, overdueTasks)
       const textContent = this.generateDailyEmailText(tasks, overdueTasks)
 
       const mailOptions = {
