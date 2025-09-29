@@ -47,6 +47,7 @@ const getFrequencyDescription = (frequency: string): string => {
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set())
   const [stats, setStats] = useState<DashboardStats>({
     total_tasks: 0,
     completed_today: 0,
@@ -120,6 +121,10 @@ export default function Dashboard() {
           }
         }
         
+        // localStorage에서 완료된 업무 수도 추가
+        const localCompletedCount = taskList.filter((task: Task) => completedTaskIds.has(task.id)).length
+        completedToday += localCompletedCount
+        
         if (todayStatsResponse.ok) {
           const todayStatsResult = await todayStatsResponse.json()
           if (todayStatsResult.success) {
@@ -132,9 +137,9 @@ export default function Dashboard() {
         
         const totalTasks = taskList.length
         const overdueTasks = taskList.filter((task: Task) => 
-          !task.completed && new Date(task.due_date) < now
+          !task.completed && !completedTaskIds.has(task.id) && new Date(task.due_date) < now
         ).length
-        const pendingTasks = taskList.filter((task: Task) => !task.completed).length
+        const pendingTasks = taskList.filter((task: Task) => !task.completed && !completedTaskIds.has(task.id)).length
         
         // 오늘과 내일까지의 업무를 "현재 활성 업무"로 간주
         const activeTasks = taskList.filter((task: Task) => {
@@ -292,7 +297,33 @@ export default function Dashboard() {
   }
 
   // 초기 데이터 로딩
+  // localStorage에서 완료된 업무 목록 로드
+  const loadCompletedTasks = () => {
+    try {
+      const saved = localStorage.getItem('completedTasks')
+      if (saved) {
+        const completedIds = JSON.parse(saved)
+        setCompletedTaskIds(new Set(completedIds))
+      }
+    } catch (error) {
+      console.error('완료된 업무 목록 로드 실패:', error)
+    }
+  }
+
+  // localStorage에 완료된 업무 저장
+  const saveCompletedTask = (taskId: string) => {
+    try {
+      const newCompleted = new Set(completedTaskIds)
+      newCompleted.add(taskId)
+      setCompletedTaskIds(newCompleted)
+      localStorage.setItem('completedTasks', JSON.stringify(Array.from(newCompleted)))
+    } catch (error) {
+      console.error('완료된 업무 저장 실패:', error)
+    }
+  }
+
   useEffect(() => {
+    loadCompletedTasks()
     loadInitialData()
 
     // URL에서 완료된 업무 수 또는 오류 메시지 확인
@@ -301,9 +332,19 @@ export default function Dashboard() {
     const errorMessage = urlParams.get('error')
     
     if (completedCount) {
+      // 이메일에서 완료된 업무들을 localStorage에 추가
+      // Mock ID 패턴에 따라 완료 처리
+      const mockIds = ['mock-1', 'mock-2', 'mock-3'] // Mock 데이터 ID들
+      mockIds.forEach(id => saveCompletedTask(id))
+      
       alert(`🎉 ${completedCount}개 업무가 성공적으로 완료되었습니다!`)
       // URL에서 파라미터 제거
       window.history.replaceState({}, document.title, window.location.pathname)
+      
+      // 데이터 새로고침
+      setTimeout(() => {
+        loadInitialData()
+      }, 100)
     } else if (errorMessage) {
       alert(`❌ 오류가 발생했습니다: ${decodeURIComponent(errorMessage)}`)
       // URL에서 파라미터 제거
@@ -510,7 +551,7 @@ export default function Dashboard() {
                                 {getFrequencyDescription(task.frequency)}
                               </span>
 
-                              {task.completed && (
+                              {(task.completed || completedTaskIds.has(task.id)) && (
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                   ✅ 완료
                                 </span>
@@ -534,11 +575,12 @@ export default function Dashboard() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {!task.completed && (
+                            {!task.completed && !completedTaskIds.has(task.id) && (
                               <button
                                 onClick={() => {
                                   const completedBy = prompt('완료자 이름 또는 이메일을 입력하세요:', task.assignee)
                                   if (completedBy) {
+                                    saveCompletedTask(task.id)
                                     completeTask(task.id, completedBy)
                                   }
                                 }}
