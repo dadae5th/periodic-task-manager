@@ -295,11 +295,17 @@ export default function Dashboard() {
   useEffect(() => {
     loadInitialData()
 
-    // URL에서 완료된 업무 수 확인
+    // URL에서 완료된 업무 수 또는 오류 메시지 확인
     const urlParams = new URLSearchParams(window.location.search)
     const completedCount = urlParams.get('completed')
+    const errorMessage = urlParams.get('error')
+    
     if (completedCount) {
       alert(`🎉 ${completedCount}개 업무가 성공적으로 완료되었습니다!`)
+      // URL에서 파라미터 제거
+      window.history.replaceState({}, document.title, window.location.pathname)
+    } else if (errorMessage) {
+      alert(`❌ 오류가 발생했습니다: ${decodeURIComponent(errorMessage)}`)
       // URL에서 파라미터 제거
       window.history.replaceState({}, document.title, window.location.pathname)
     }
