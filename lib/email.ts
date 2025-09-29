@@ -189,54 +189,64 @@ class EmailService {
             </div>
             
             <div class="task-section">
-                <h2>🚨 지연된 업무</h2>
+                <h2>🚨 지연된 업무 (완료할 업무를 선택하세요)</h2>
                 ${overdueTasks.length > 0 ? `
-                <div class="batch-actions">
-                    <h3>⚡ 지연 업무 일괄 완료</h3>
-                    <a href="${appUrl}/api/tasks/batch-complete?tasks=${overdueTasks.map(t => t.id).join(',')}&completed_by=${encodeURIComponent(overdueTasks[0]?.assignee || '')}" 
-                       class="btn btn-batch-complete">🔥 지연 업무 모두 완료</a>
-                </div>
+                <form method="post" action="${appUrl}/api/tasks/batch-complete" style="margin: 20px 0;">
+                    <input type="hidden" name="completed_by" value="${overdueTasks[0]?.assignee || ''}" />
                 ` : ''}
                 ${overdueTasks.map(task => `
                 <div class="task overdue">
-                    <div class="task-title">${task.title}</div>
-                    <div class="task-meta">
-                        담당자: ${task.assignee} | 
-                        마감일: ${new Date(task.due_date).toLocaleDateString('ko-KR')} |
-                        지연: ${Math.ceil((Date.now() - new Date(task.due_date).getTime()) / (1000 * 60 * 60 * 24))}일
-                    </div>
-                    ${task.description ? `<p>${task.description}</p>` : ''}
-                    <div class="task-actions">
-                        <a href="${appUrl}/api/tasks/${task.id}/complete?completed_by=${encodeURIComponent(task.assignee)}" class="btn btn-complete">✅ 완료 처리</a>
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
+                        <input type="checkbox" name="task_ids" value="${task.id}" class="task-checkbox" style="margin-top: 5px;" />
+                        <div style="flex: 1;">
+                            <div class="task-title">${task.title}</div>
+                            <div class="task-meta">
+                                담당자: ${task.assignee} | 
+                                마감일: ${new Date(task.due_date).toLocaleDateString('ko-KR')} |
+                                지연: ${Math.ceil((Date.now() - new Date(task.due_date).getTime()) / (1000 * 60 * 60 * 24))}일
+                            </div>
+                            ${task.description ? `<p style="margin: 5px 0; color: #666;">${task.description}</p>` : ''}
+                        </div>
                     </div>
                 </div>
                 `).join('')}
+                ${overdueTasks.length > 0 ? `
+                    <div style="text-align: center; padding: 20px;">
+                        <button type="submit" class="btn btn-batch-complete" style="border: none; cursor: pointer;">
+                            🔥 선택한 지연 업무 완료
+                        </button>
+                    </div>
+                </form>
+                ` : ''}
             </div>
             ` : ''}
             
             ${tasks.length > 0 ? `
-            <div class="batch-actions">
-                <h3>🚀 빠른 일괄 완료</h3>
-                <p>아래 버튼을 클릭하면 오늘 해야할 모든 업무를 한번에 완료 처리할 수 있습니다.</p>
-                <a href="${appUrl}/api/tasks/batch-complete?tasks=${tasks.map(t => t.id).join(',')}&completed_by=${encodeURIComponent(tasks[0]?.assignee || '')}" 
-                   class="btn btn-batch-complete">⚡ 모든 업무 일괄 완료</a>
-            </div>
-            
             <div class="task-section">
-                <h2>📅 오늘 해야할 일</h2>
-                ${tasks.map(task => `
-                <div class="task">
-                    <div class="task-title">${task.title}</div>
-                    <div class="task-meta">
-                        담당자: ${task.assignee} | 
-                        마감일: ${new Date(task.due_date).toLocaleDateString('ko-KR')}
+                <h2>� 오늘 해야할 일 (완료할 업무를 선택하세요)</h2>
+                <form method="post" action="${appUrl}/api/tasks/batch-complete" style="margin: 20px 0;">
+                    <input type="hidden" name="completed_by" value="${tasks[0]?.assignee || ''}" />
+                    ${tasks.map(task => `
+                    <div class="task">
+                        <div style="display: flex; align-items: flex-start; gap: 10px;">
+                            <input type="checkbox" name="task_ids" value="${task.id}" class="task-checkbox" style="margin-top: 5px;" />
+                            <div style="flex: 1;">
+                                <div class="task-title">${task.title}</div>
+                                <div class="task-meta">
+                                    담당자: ${task.assignee} | 
+                                    마감일: ${new Date(task.due_date).toLocaleDateString('ko-KR')}
+                                </div>
+                                ${task.description ? `<p style="margin: 5px 0; color: #666;">${task.description}</p>` : ''}
+                            </div>
+                        </div>
                     </div>
-                    ${task.description ? `<p>${task.description}</p>` : ''}
-                    <div class="task-actions">
-                        <a href="${appUrl}/api/tasks/${task.id}/complete?completed_by=${encodeURIComponent(task.assignee)}" class="btn btn-complete">✅ 완료 처리</a>
+                    `).join('')}
+                    <div style="text-align: center; padding: 20px;">
+                        <button type="submit" class="btn btn-batch-complete" style="border: none; cursor: pointer;">
+                            ✅ 선택한 업무 완료
+                        </button>
                     </div>
-                </div>
-                `).join('')}
+                </form>
             </div>
             ` : '<p>오늘 해야할 일이 없습니다! 🎉</p>'}
             
@@ -273,15 +283,19 @@ ${overdueTasks.map(task =>
   `- ${task.title} (담당: ${task.assignee}, 마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')})`
 ).join('\n')}
 
+💡 HTML 버전 이메일에서 완료할 업무를 선택하여 처리할 수 있습니다.
+
 `
     }
 
     if (tasks.length > 0) {
       content += `
-📅 오늘 해야할 일:
+📅 오늘 해야할 일 (${tasks.length}개):
 ${tasks.map(task => 
   `- ${task.title} (담당: ${task.assignee}, 마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')})`
 ).join('\n')}
+
+💡 HTML 버전 이메일에서 완료할 업무를 선택하여 처리할 수 있습니다.
 
 `
     } else {

@@ -1,0 +1,225 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { supabaseAdmin } from '@/lib/supabase'
+import { createApiResponse } from '@/lib/utils'
+import { Task } from '@/types'
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    res.setHeader('Allow', ['GET', 'POST'])
+    return res.status(405).json(createApiResponse(false, null, '허용되지 않는 메서드'))
+  }
+
+  try {
+    // GET 요청과 POST 요청 모두 지원
+    let task_ids: string[]
+    let completed_by: string
+    let notify_email: string | undefined
+
+    if (req.method === 'GET') {
+      const { tasks, completed_by: completedByParam } = req.query
+      
+      if (!tasks || typeof tasks !== 'string') {
+        return res.status(400).json(
+          createApiResponse(false, null, '완료할 업무 ID 목록이 필요합니다.')
+        )
+      }
+      
+      task_ids = tasks.split(',').filter(id => id.trim())
+      completed_by = Array.isArray(completedByParam) ? completedByParam[0] : (completedByParam || '')
+      notify_email = completed_by
+      
+      // GET 요청인 경우 HTML 응답으로 리디렉션
+      const isHtmlRequest = req.headers.accept?.includes('text/html')
+      
+      if (isHtmlRequest) {
+        // 완료 처리 수행
+        const result = await processBatchCompletion(task_ids, completed_by, notify_email)
+        
+        // 성공 페이지로 리디렉션
+        const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?completed=${result.completed_count}`
+        return res.redirect(302, redirectUrl)
+      }
+    } else {
+      // POST 요청 (폼 데이터)
+      const body = req.body
+      
+      // 폼에서 오는 경우 task_ids는 문자열 배열 또는 단일 문자열일 수 있음
+      const formTaskIds = body.task_ids
+      if (Array.isArray(formTaskIds)) {
+        task_ids = formTaskIds
+      } else if (typeof formTaskIds === 'string') {
+        task_ids = [formTaskIds]
+      } else {
+        task_ids = []
+      }
+      
+      completed_by = body.completed_by
+      notify_email = body.notify_email || completed_by
+
+      // POST 요청인 경우도 HTML 응답으로 리디렉션
+      if (task_ids.length > 0) {
+        const result = await processBatchCompletion(task_ids, completed_by, notify_email)
+        
+        const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?completed=${result.completed_count}`
+        return res.redirect(302, redirectUrl)
+      }
+    }
+
+    if (!task_ids || !Array.isArray(task_ids) || task_ids.length === 0) {
+      return res.status(400).json(
+        createApiResponse(false, null, '완료할 업무 ID 목록이 필요합니다.')
+      )
+    }
+
+    if (!completed_by) {
+      return res.status(400).json(
+        createApiResponse(false, null, '완료자 정보가 필요합니다.')
+      )
+    }
+
+    const result = await processBatchCompletion(task_ids, completed_by, notify_email)
+    
+    return res.status(200).json(
+      createApiResponse(true, result, `${result.completed_count}개 업무가 완료되었습니다.`)
+    )
+
+  } catch (error) {
+    console.error('일괄 완료 처리 중 오류:', error)
+    return res.status(500).json(
+      createApiResponse(false, null, '서버 오류가 발생했습니다.')
+    )
+  }
+}
+
+async function processBatchCompletion(task_ids: string[], completed_by: string, notify_email?: string) {
+  console.log(`Batch completing ${task_ids.length} tasks by ${completed_by}`)
+
+  // 1. 완료할 업무들 조회
+  const { data: tasksToComplete, error: fetchError } = await supabaseAdmin
+    .from('tasks')
+    .select('*')
+    .in('id', task_ids)
+    .eq('completed', false) as { data: Task[] | null, error: any }
+
+  if (fetchError) {
+    console.error('업무 조회 실패:', fetchError)
+    throw new Error('업무 조회에 실패했습니다.')
+  }
+
+  if (!tasksToComplete || tasksToComplete.length === 0) {
+    throw new Error('완료할 수 있는 업무가 없습니다.')
+  }
+
+  const completedTasks: Task[] = []
+  const completionRecords = []
+
+  // 2. 각 업무에 대해 완료 처리
+  for (const task of tasksToComplete) {
+    try {
+      // 업무 완료 처리
+      const { data: updatedTask, error: updateError } = await (supabaseAdmin as any)
+        .from('tasks')
+        .update({ completed: true, updated_at: new Date().toISOString() })
+        .eq('id', task.id)
+        .select()
+        .single()
+
+      if (updateError) {
+        console.error(`업무 ${task.id} 완료 처리 실패:`, updateError)
+        continue
+      }
+
+      // 완료 기록 추가
+      const { error: recordError } = await (supabaseAdmin as any)
+        .from('task_completions')
+        .insert([{
+          task_id: task.id,
+          completed_by: completed_by,
+          completed_at: new Date().toISOString(),
+          notes: 'Batch completion from email'
+        }])
+
+      if (recordError) {
+        console.error(`완료 기록 추가 실패 (${task.id}):`, recordError)
+      }
+
+      completedTasks.push(updatedTask)
+      completionRecords.push({
+        task_id: task.id,
+        title: task.title,
+        completed_by: completed_by,
+        completed_at: new Date().toISOString()
+      })
+
+      console.log(`업무 완료: ${task.title} (${task.id})`)
+
+      // 주기적 업무인 경우 다음 마감일로 업데이트
+      if (task.frequency) {
+        try {
+          // TaskScheduler를 사용하여 다음 실행일 계산 (주말 제외 로직 포함)
+          const { default: TaskScheduler } = await import('@/lib/scheduler')
+          const nextDueDate = TaskScheduler.getNextScheduledDate(task, new Date(task.due_date))
+
+          // 새로운 업무 생성 (다음 주기용)
+          const { error: nextTaskError } = await (supabaseAdmin as any)
+            .from('tasks')
+            .insert([{
+              title: task.title,
+              description: task.description,
+              assignee: task.assignee,
+              frequency: task.frequency,
+              frequency_details: task.frequency_details,
+              due_date: nextDueDate.toISOString().split('T')[0],
+              completed: false
+            }])
+
+          if (nextTaskError) {
+            console.error(`다음 주기 업무 생성 실패 (${task.id}):`, nextTaskError)
+          }
+        } catch (scheduleError) {
+          console.error(`주기 업무 스케줄링 실패 (${task.id}):`, scheduleError)
+        }
+      }
+    } catch (taskError) {
+      console.error(`업무 ${task.id} 처리 중 오류:`, taskError)
+      continue
+    }
+  }
+
+  // 3. 완료 알림 이메일 발송 (선택적)
+  if (notify_email && completedTasks.length > 0) {
+    try {
+      const { getEmailService } = await import('@/lib/email')
+      const emailService = getEmailService()
+      
+      await emailService.sendBatchCompletionEmail(
+        notify_email,
+        completedTasks,
+        completed_by
+      )
+    } catch (emailError) {
+      console.error('완료 알림 이메일 발송 실패:', emailError)
+      // 이메일 실패는 전체 작업을 실패로 처리하지 않음
+    }
+  }
+
+  const successCount = completedTasks.length
+  const totalCount = task_ids.length
+
+  console.log(`일괄 완료 처리 완료: ${successCount}/${totalCount} 성공`)
+
+  return {
+    completed_count: successCount,
+    total_count: totalCount,
+    completed_tasks: completedTasks.map(task => ({
+      id: task.id,
+      title: task.title,
+      assignee: task.assignee,
+      due_date: task.due_date
+    })),
+    completion_records: completionRecords
+  }
+}

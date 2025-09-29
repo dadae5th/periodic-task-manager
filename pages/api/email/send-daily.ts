@@ -8,8 +8,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST'])
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    res.setHeader('Allow', ['GET', 'POST'])
     return res.status(405).json(createApiResponse(false, null, '허용되지 않는 메서드'))
   }
 
@@ -21,12 +21,43 @@ export default async function handler(
  */
 async function handleSendDaily(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { recipients, test_mode = false } = req.body
+    let recipients, test_mode, force_weekend
+
+    if (req.method === 'GET') {
+      // GET 요청 - 쿼리 파라미터에서 값 가져오기
+      const recipientsParam = req.query.recipients as string
+      recipients = recipientsParam ? recipientsParam.split(',') : ['bae.jae.kwon@drbworld.com']
+      test_mode = req.query.test_mode === 'true' || false
+      force_weekend = req.query.force_weekend === 'true' || false
+    } else {
+      // POST 요청 - 기존 방식
+      const body = req.body
+      recipients = body.recipients
+      test_mode = body.test_mode || false
+      force_weekend = body.force_weekend || false
+    }
 
     // 수신자 목록 검증
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
       return res.status(400).json(
         createApiResponse(false, null, '수신자 목록이 필요합니다.')
+      )
+    }
+
+    // 주말 체크 - force_weekend가 true가 아닌 경우에만 체크
+    const currentDate = getToday()
+    const dayOfWeek = currentDate.getDay() // 0: 일요일, 6: 토요일
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+
+    if (isWeekend && !force_weekend && !test_mode) {
+      return res.status(200).json(
+        createApiResponse(true, {
+          message: '주말이므로 이메일 발송을 생략했습니다.',
+          day_of_week: ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][dayOfWeek],
+          is_weekend: true,
+          skipped: true,
+          recipients: recipients.length
+        })
       )
     }
 

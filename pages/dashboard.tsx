@@ -479,8 +479,8 @@ export default function Dashboard() {
                     <p className="text-gray-500">등록된 업무가 없습니다.</p>
                   </div>
                 ) : (
-                  tasks.map((task) => {
-                    const isOverdue = !task.completed && new Date(task.due_date) < new Date()
+                  tasks.filter(task => !task.completed).map((task) => {
+                    const isOverdue = new Date(task.due_date) < new Date()
                     
                     return (
                       <div

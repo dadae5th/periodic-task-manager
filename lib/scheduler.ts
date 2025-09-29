@@ -33,10 +33,12 @@ export class TaskScheduler {
   }
 
   /**
-   * 일간 업무 체크 (매일 실행)
+   * 일간 업무 체크 (평일에만 실행)
    */
   private static shouldRunDaily(targetDate: Date): boolean {
-    return true // 매일 실행
+    const dayOfWeek = targetDate.getDay() // 0: 일요일, 6: 토요일
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    return !isWeekend // 주말이 아닌 경우에만 실행
   }
 
   /**
@@ -144,11 +146,24 @@ export class TaskScheduler {
   }
 
   /**
-   * 다음 일간 실행일 (내일)
+   * 다음 일간 실행일 (주말 제외)
    */
   private static getNextDailyDate(fromDate: Date): Date {
     const nextDate = new Date(fromDate)
     nextDate.setDate(nextDate.getDate() + 1)
+    
+    // 주말인 경우 다음 평일로 이동
+    while (true) {
+      const dayOfWeek = nextDate.getDay()
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+      
+      if (!isWeekend) {
+        break // 평일이면 중단
+      }
+      
+      nextDate.setDate(nextDate.getDate() + 1) // 하루 더 추가
+    }
+    
     return nextDate
   }
 
@@ -276,7 +291,7 @@ export class TaskScheduler {
     
     switch (frequency) {
       case 'daily':
-        return '매일'
+        return '매일 (평일만)'
 
       case 'weekly':
         const dayName = frequencyDetails.day_of_week !== undefined 
@@ -315,8 +330,15 @@ export class TaskScheduler {
   ): Date {
     switch (frequency) {
       case 'daily':
-        // 일간: 오늘 또는 내일
-        return createDate
+        // 일간: 오늘이 평일이면 오늘, 주말이면 다음 평일
+        const todayDayOfWeek = createDate.getDay()
+        const isTodayWeekend = todayDayOfWeek === 0 || todayDayOfWeek === 6
+        
+        if (!isTodayWeekend) {
+          return createDate // 오늘이 평일이면 오늘
+        } else {
+          return this.getNextDailyDate(createDate) // 주말이면 다음 평일
+        }
 
       case 'weekly':
         // 주간: 이번 주 해당 요일 또는 다음 주 해당 요일

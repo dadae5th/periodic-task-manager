@@ -42,11 +42,25 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
     const currentMinute = now.getMinutes()
     const currentTime = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`
 
-    // 2. 주말 체크 (필요시 주말 발송 제한 가능)
+    // 2. 주말 체크 - 토요일(6), 일요일(0)에는 발송하지 않음
     const dayOfWeek = now.getDay() // 0: 일요일, 6: 토요일
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 
-    console.log(`[CRON] 이메일 발송 시작 - 시간: ${currentTime}, 주말: ${isWeekend ? 'Yes' : 'No'}`)
+    console.log(`[CRON] 이메일 발송 시작 - 시간: ${currentTime}, 요일: ${['일', '월', '화', '수', '목', '금', '토'][dayOfWeek]}, 주말: ${isWeekend ? 'Yes' : 'No'}`)
+
+    // 3. 주말인 경우 발송하지 않음
+    if (isWeekend) {
+      console.log('[CRON] 주말이므로 이메일 발송을 생략합니다.')
+      return res.status(200).json(
+        createApiResponse(true, { 
+          message: '주말이므로 이메일 발송을 생략했습니다.',
+          current_time: currentTime,
+          day_of_week: ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][dayOfWeek],
+          is_weekend: true,
+          skipped: true
+        })
+      )
+    }
 
     // 4. 모든 업무 조회
     const { data: allTasks, error: tasksError } = await supabaseAdmin
