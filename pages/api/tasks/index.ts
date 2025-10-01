@@ -2,6 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { createApiResponse } from '@/lib/utils'
 import { Task } from '@/types'
 
+// SSL 인증서 검증 우회 설정 (개발 환경용)
+if (process.env.NODE_ENV === 'development') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+}
+
 // 직접 Supabase REST API 호출하는 함수
 async function callSupabaseAPI(endpoint: string, options: any = {}) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -9,12 +14,14 @@ async function callSupabaseAPI(endpoint: string, options: any = {}) {
   
   const url = `${supabaseUrl}/rest/v1/${endpoint}`
   
+  // 추가 헤더 설정으로 SSL 관련 문제 해결 시도
   const response = await fetch(url, {
     method: options.method || 'GET',
     headers: {
       'apikey': serviceKey,
       'Authorization': `Bearer ${serviceKey}`,
       'Content-Type': 'application/json',
+      'User-Agent': 'periodic-task-manager/1.0',
       ...options.headers
     },
     body: options.body ? JSON.stringify(options.body) : undefined

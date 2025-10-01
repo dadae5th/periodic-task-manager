@@ -61,6 +61,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [viewMode, setViewMode] = useState<'active' | 'all'>('active')
   const [newTask, setNewTask] = useState<NewTask>({
     title: '',
     description: '',
@@ -519,14 +520,50 @@ export default function Dashboard() {
                   </button>
                 </div>
               </div>
+              
+              {/* 탭 네비게이션 */}
+              <div className="px-6 py-3 border-b border-gray-200">
+                <div className="flex space-x-8">
+                  <button
+                    onClick={() => setViewMode('active')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      viewMode === 'active'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    진행 중 업무 ({tasks.filter(task => !task.completed && !completedTaskIds.has(task.id)).length}개)
+                  </button>
+                  <button
+                    onClick={() => setViewMode('all')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      viewMode === 'all'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    전체 업무 ({tasks.length}개)
+                  </button>
+                </div>
+              </div>
 
               <div className="divide-y divide-gray-200">
-                {tasks.length === 0 ? (
-                  <div className="px-6 py-8 text-center">
-                    <p className="text-gray-500">등록된 업무가 없습니다.</p>
-                  </div>
-                ) : (
-                  tasks.filter(task => !task.completed).map((task) => {
+                {(() => {
+                  const filteredTasks = viewMode === 'active' 
+                    ? tasks.filter(task => !task.completed && !completedTaskIds.has(task.id))
+                    : tasks;
+                  
+                  if (filteredTasks.length === 0) {
+                    return (
+                      <div className="px-6 py-8 text-center">
+                        <p className="text-gray-500">
+                          {viewMode === 'active' ? '진행 중인 업무가 없습니다.' : '등록된 업무가 없습니다.'}
+                        </p>
+                      </div>
+                    );
+                  }
+                  
+                  return filteredTasks.map((task) => {
                     const isOverdue = new Date(task.due_date) < new Date()
                     
                     return (
@@ -600,8 +637,8 @@ export default function Dashboard() {
                         </div>
                       </div>
                     )
-                  })
-                )}
+                  });
+                })()}
               </div>
             </div>
           )}
