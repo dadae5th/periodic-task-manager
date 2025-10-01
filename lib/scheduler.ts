@@ -387,4 +387,75 @@ export function getTodayTasksAndOverdue(tasks: Task[]): {
   return { todayTasks, overdueTasks }
 }
 
+/**
+ * 이번주, 이번달 업무까지 포함한 분류 함수
+ */
+export function getTasksByPeriod(tasks: Task[]): {
+  todayTasks: Task[]
+  overdueTasks: Task[]
+  thisWeekTasks: Task[]
+  thisMonthTasks: Task[]
+} {
+  const today = new Date()
+  const activeTasks = tasks.filter(task => !task.completed)
+  
+  // 오늘 해야할 일
+  const todayTasks = TaskScheduler.getTasksForDate(activeTasks, today)
+  
+  // 지연된 업무
+  const overdueTasks = TaskScheduler.getOverdueTasks(tasks, today)
+  
+  // 이번 주 업무 (오늘 제외)
+  const thisWeekTasks: Task[] = []
+  const thisWeekStart = getWeekStart(today)
+  const thisWeekEnd = getWeekEnd(today)
+  
+  for (let d = new Date(thisWeekStart); d <= thisWeekEnd; d.setDate(d.getDate() + 1)) {
+    if (d.toDateString() !== today.toDateString()) { // 오늘 제외
+      const dayTasks = TaskScheduler.getTasksForDate(activeTasks, new Date(d))
+      dayTasks.forEach(task => {
+        if (!thisWeekTasks.find(existing => existing.id === task.id)) {
+          thisWeekTasks.push(task)
+        }
+      })
+    }
+  }
+  
+  // 이번 달 업무 (오늘, 이번주 제외)
+  const thisMonthTasks: Task[] = []
+  const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+  const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  
+  for (let d = new Date(thisMonthStart); d <= thisMonthEnd; d.setDate(d.getDate() + 1)) {
+    if (d < thisWeekStart || d > thisWeekEnd) { // 이번주 제외
+      const dayTasks = TaskScheduler.getTasksForDate(activeTasks, new Date(d))
+      dayTasks.forEach(task => {
+        if (!thisMonthTasks.find(existing => existing.id === task.id)) {
+          thisMonthTasks.push(task)
+        }
+      })
+    }
+  }
+  
+  return { todayTasks, overdueTasks, thisWeekTasks, thisMonthTasks }
+}
+
+/**
+ * 주의 시작일 (월요일) 구하기
+ */
+function getWeekStart(date: Date): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1) // 월요일부터 시작
+  return new Date(d.setDate(diff))
+}
+
+/**
+ * 주의 마지막일 (일요일) 구하기
+ */
+function getWeekEnd(date: Date): Date {
+  const d = getWeekStart(date)
+  return new Date(d.setDate(d.getDate() + 6))
+}
+
 export default TaskScheduler

@@ -3,7 +3,7 @@ import { Task } from '@/types'
 /**
  * 이메일 친화적인 템플릿 - JavaScript 없이 작동
  */
-export function generateEmailFriendlyTemplate(tasks: Task[], overdueTasks: Task[]): string {
+export function generateEmailFriendlyTemplate(tasks: Task[], overdueTasks: Task[], thisWeekTasks: Task[] = [], thisMonthTasks: Task[] = []): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   
   return `
@@ -122,17 +122,58 @@ export function generateEmailFriendlyTemplate(tasks: Task[], overdueTasks: Task[
             </div>
             ` : '<p>오늘 해야할 일이 없습니다! 🎉</p>'}
             
+            ${thisWeekTasks.length > 0 ? `
+            <div class="task-section">
+                <h2>📆 이번 주 해야할 일</h2>
+                <div class="individual-section">
+                    ${thisWeekTasks.map(task => `
+                    <div class="task">
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-meta">
+                            담당자: ${task.assignee} | 
+                            마감일: ${new Date(task.due_date).toLocaleDateString('ko-KR')} |
+                            주기: ${task.frequency === 'daily' ? '매일' : task.frequency === 'weekly' ? '매주' : '매월'}
+                        </div>
+                        ${task.description ? `<p style="margin: 5px 0; color: #666;">${task.description}</p>` : ''}
+                    </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${thisMonthTasks.length > 0 ? `
+            <div class="task-section">
+                <h2>🗓️ 이번 달 해야할 일</h2>
+                <div class="individual-section">
+                    ${thisMonthTasks.map(task => `
+                    <div class="task">
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-meta">
+                            담당자: ${task.assignee} | 
+                            마감일: ${new Date(task.due_date).toLocaleDateString('ko-KR')} |
+                            주기: ${task.frequency === 'daily' ? '매일' : task.frequency === 'weekly' ? '매주' : '매월'}
+                        </div>
+                        ${task.description ? `<p style="margin: 5px 0; color: #666;">${task.description}</p>` : ''}
+                    </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+            
             <!-- 선택적 완료 옵션 -->
             <div class="batch-section">
                 <h3>🎯 선택적 완료 (웹에서)</h3>
                 <p>더 세밀한 선택을 원하시면 대시보드에서 개별적으로 처리하세요.</p>
-                <a href="${appUrl}/dashboard" class="btn btn-dashboard">📊 대시보드에서 관리하기</a>
+                <div style="text-align: center; margin: 15px 0;">
+                    <a href="${appUrl}/dashboard" class="btn btn-dashboard">📊 진행 중 업무 보기</a>
+                    <a href="${appUrl}/dashboard?tab=all" class="btn btn-dashboard" style="margin-left: 10px;">📋 전체 업무 보기</a>
+                </div>
             </div>
         </div>
         
         <div class="footer">
             <p>이 이메일은 자동으로 발송되었습니다.</p>
-            <p>업무 관리 시스템 | <a href="${appUrl}">대시보드 바로가기</a></p>
+            <p>업무 관리 시스템 | <a href="${appUrl}/dashboard?tab=all">전체 업무 보기</a></p>
         </div>
     </div>
 </body>

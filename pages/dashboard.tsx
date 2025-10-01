@@ -62,6 +62,15 @@ export default function Dashboard() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [viewMode, setViewMode] = useState<'active' | 'all'>('active')
+
+  // URL 파라미터에서 초기 탭 설정
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const tabParam = urlParams.get('tab')
+    if (tabParam === 'all') {
+      setViewMode('all')
+    }
+  }, [])
   const [newTask, setNewTask] = useState<NewTask>({
     title: '',
     description: '',

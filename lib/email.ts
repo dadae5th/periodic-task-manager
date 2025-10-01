@@ -42,12 +42,14 @@ class EmailService {
   async sendDailyTaskEmail(
     recipient: string,
     tasks: Task[],
-    overdueTasks: Task[]
+    overdueTasks: Task[],
+    thisWeekTasks: Task[] = [],
+    thisMonthTasks: Task[] = []
   ): Promise<EmailResult> {
     try {
       // Gmail 설정이 완료되지 않은 경우 Mock 응답
       if (!this.config.user || !this.config.password) {
-        console.log(`Mock 이메일 발송: ${recipient}에게 ${tasks.length}개 업무, ${overdueTasks.length}개 지연 업무`)
+        console.log(`Mock 이메일 발송: ${recipient}에게 오늘 ${tasks.length}개, 지연 ${overdueTasks.length}개, 이번주 ${thisWeekTasks.length}개, 이번달 ${thisMonthTasks.length}개 업무`)
         return {
           success: true,
           messageId: `mock-${Date.now()}`,
@@ -58,8 +60,8 @@ class EmailService {
 
       // 이메일 친화적인 템플릿 사용 (JavaScript 없이 작동)
       const { generateEmailFriendlyTemplate } = require('./email-friendly-template')
-      const htmlContent = generateEmailFriendlyTemplate(tasks, overdueTasks)
-      const textContent = this.generateDailyEmailText(tasks, overdueTasks)
+      const htmlContent = generateEmailFriendlyTemplate(tasks, overdueTasks, thisWeekTasks, thisMonthTasks)
+      const textContent = this.generateDailyEmailText(tasks, overdueTasks, thisWeekTasks, thisMonthTasks)
 
       const mailOptions = {
         from: `"${this.config.fromName}" <${this.config.user}>`,
@@ -276,7 +278,7 @@ class EmailService {
   /**
    * 일일 업무 이메일 텍스트 생성
    */
-  private generateDailyEmailText(tasks: Task[], overdueTasks: Task[]): string {
+  private generateDailyEmailText(tasks: Task[], overdueTasks: Task[], thisWeekTasks: Task[] = [], thisMonthTasks: Task[] = []): string {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     let content = `
 📋 오늘의 업무 알림
@@ -308,6 +310,26 @@ ${tasks.map(task =>
 `
     } else {
       content += '오늘 해야할 일이 없습니다! 🎉\n\n'
+    }
+
+    if (thisWeekTasks.length > 0) {
+      content += `
+📆 이번 주 해야할 일 (${thisWeekTasks.length}개):
+${thisWeekTasks.map(task => 
+  `- ${task.title} (담당: ${task.assignee}, 마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')})`
+).join('\n')}
+
+`
+    }
+
+    if (thisMonthTasks.length > 0) {
+      content += `
+🗓️ 이번 달 해야할 일 (${thisMonthTasks.length}개):
+${thisMonthTasks.map(task => 
+  `- ${task.title} (담당: ${task.assignee}, 마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')})`
+).join('\n')}
+
+`
     }
 
     content += `

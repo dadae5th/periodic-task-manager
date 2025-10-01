@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createApiResponse, getToday } from '@/lib/utils'
 import { getEmailService } from '@/lib/email'
-import { TaskScheduler, getTodayTasksAndOverdue } from '@/lib/scheduler'
+import { TaskScheduler, getTodayTasksAndOverdue, getTasksByPeriod } from '@/lib/scheduler'
 
 export default async function handler(
   req: NextApiRequest,
@@ -61,24 +61,44 @@ async function handleSendDaily(req: NextApiRequest, res: NextApiResponse) {
       )
     }
 
-    // 모든 활성 업무 조회
-    const { data: allTasks, error: tasksError } = await supabaseAdmin
-      .from('tasks')
-      .select('*')
-      .order('due_date', { ascending: true })
+    // SSL 인증서 우회 설정
+    process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0'
 
-    if (tasksError) {
-      console.error('업무 조회 실패:', tasksError)
+    // 직접 REST API로 모든 활성 업무 조회
+    let allTasks = []
+    try {
+      console.log('직접 REST API를 사용하여 tasks 조회...')
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/tasks?order=due_date.asc`, {
+        headers: {
+          'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      allTasks = await response.json()
+      console.log(`총 ${allTasks.length}개 업무 조회됨`)
+    } catch (error) {
+      console.error('업무 조회 실패:', {
+        message: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.stack : String(error),
+        hint: '',
+        code: ''
+      })
       return res.status(500).json(
-        createApiResponse(false, null, '업무 조회에 실패했습니다.', tasksError.message)
+        createApiResponse(false, null, '업무 조회에 실패했습니다.', error instanceof Error ? error.message : String(error))
       )
     }
 
-    const tasks = allTasks || []
+    const tasks = allTasks
     const today = getToday()
 
-    // 오늘 해야할 일과 지연된 업무 분류
-    const { todayTasks, overdueTasks } = getTodayTasksAndOverdue(tasks)
+    // 기간별 업무 분류 (오늘, 지연, 이번주, 이번달)
+    const { todayTasks, overdueTasks, thisWeekTasks, thisMonthTasks } = getTasksByPeriod(tasks)
 
     // 이메일 서비스 초기화
     const emailService = getEmailService()
@@ -112,11 +132,21 @@ async function handleSendDaily(req: NextApiRequest, res: NextApiResponse) {
         const recipientOverdueTasks = overdueTasks.filter(task => 
           task.assignee === recipient || task.assignee === 'all' || !task.assignee
         )
+        
+        const recipientThisWeekTasks = thisWeekTasks.filter(task => 
+          task.assignee === recipient || task.assignee === 'all' || !task.assignee
+        )
+        
+        const recipientThisMonthTasks = thisMonthTasks.filter(task => 
+          task.assignee === recipient || task.assignee === 'all' || !task.assignee
+        )
 
         const result = await emailService.sendDailyTaskEmail(
           recipient,
           recipientTodayTasks,
-          recipientOverdueTasks
+          recipientOverdueTasks,
+          recipientThisWeekTasks,
+          recipientThisMonthTasks
         )
 
         results.push(result)
