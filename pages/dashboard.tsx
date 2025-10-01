@@ -723,7 +723,7 @@ export default function Dashboard() {
                   {/* 주기 */}
                   <div>
                     <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-1">
-                      반복 주기
+                      업무 유형
                     </label>
                     <select
                       id="frequency"
