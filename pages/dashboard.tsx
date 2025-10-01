@@ -38,6 +38,7 @@ const formatDDay = (dateString: string): string => {
 
 const getFrequencyDescription = (frequency: string): string => {
   switch (frequency) {
+    case 'once': return '일회성'
     case 'daily': return '매일'
     case 'weekly': return '매주'
     case 'monthly': return '매월'
@@ -75,7 +76,7 @@ export default function Dashboard() {
     title: '',
     description: '',
     assignee: 'bae.jae.kwon@drbworld.com',
-    frequency: 'daily',
+    frequency: 'once',
     due_date: new Date().toISOString().split('T')[0]
   })
 
@@ -277,7 +278,7 @@ export default function Dashboard() {
           title: '',
           description: '',
           assignee: 'bae.jae.kwon@drbworld.com',
-          frequency: 'daily',
+          frequency: 'once',
           due_date: new Date().toISOString().split('T')[0]
         })
         setShowAddModal(false)
@@ -301,7 +302,7 @@ export default function Dashboard() {
       title: '',
       description: '',
       assignee: 'bae.jae.kwon@drbworld.com',
-      frequency: 'daily',
+      frequency: 'once',
       due_date: new Date().toISOString().split('T')[0]
     })
   }
@@ -590,6 +591,7 @@ export default function Dashboard() {
                               </h3>
                               
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                task.frequency === 'once' ? 'bg-gray-100 text-gray-800' :
                                 task.frequency === 'daily' ? 'bg-blue-100 text-blue-800' :
                                 task.frequency === 'weekly' ? 'bg-green-100 text-green-800' :
                                 'bg-purple-100 text-purple-800'
@@ -726,9 +728,10 @@ export default function Dashboard() {
                     <select
                       id="frequency"
                       value={newTask.frequency}
-                      onChange={(e) => setNewTask({ ...newTask, frequency: e.target.value as 'daily' | 'weekly' | 'monthly' })}
+                      onChange={(e) => setNewTask({ ...newTask, frequency: e.target.value as 'once' | 'daily' | 'weekly' | 'monthly' })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
+                      <option value="once">일회성</option>
                       <option value="daily">매일</option>
                       <option value="weekly">매주</option>
                       <option value="monthly">매월</option>
@@ -738,7 +741,7 @@ export default function Dashboard() {
                   {/* 마감일 */}
                   <div>
                     <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 mb-1">
-                      첫 번째 마감일 *
+                      {newTask.frequency === 'once' ? '마감일 *' : '첫 번째 마감일 *'}
                     </label>
                     <input
                       type="date"
