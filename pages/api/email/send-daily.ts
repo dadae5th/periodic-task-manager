@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createApiResponse, getToday } from '@/lib/utils'
 import { getEmailService } from '@/lib/email'
-import { TaskScheduler, getTodayTasksAndOverdue, getTasksByPeriod } from '@/lib/scheduler'
+import { TaskScheduler, getTodayTasksAndOverdue, getTasksByPeriod, filterExpiredOnceTasks } from '@/lib/scheduler'
 
 export default async function handler(
   req: NextApiRequest,
@@ -80,8 +80,12 @@ async function handleSendDaily(req: NextApiRequest, res: NextApiResponse) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      allTasks = await response.json()
-      console.log(`총 ${allTasks.length}개 업무 조회됨`)
+      const allTasksRaw = await response.json()
+      
+      // 만료된 일회성 업무 필터링
+      allTasks = filterExpiredOnceTasks(allTasksRaw)
+      
+      console.log(`총 ${allTasksRaw.length}개 업무 조회됨 (필터링 후: ${allTasks.length}개)`)
     } catch (error) {
       console.error('업무 조회 실패:', {
         message: error instanceof Error ? error.message : String(error),

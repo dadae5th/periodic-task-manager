@@ -3,7 +3,7 @@ export interface Task {
   title: string
   description?: string
   assignee: string
-  frequency: 'daily' | 'weekly' | 'monthly'
+  frequency: 'once' | 'daily' | 'weekly' | 'monthly'
   frequency_details: FrequencyDetails
   due_date: string
   completed: boolean

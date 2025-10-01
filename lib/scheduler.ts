@@ -18,6 +18,9 @@ export class TaskScheduler {
     const { frequency, frequency_details } = task
 
     switch (frequency) {
+      case 'once':
+        return this.shouldRunOnce(task, targetDate)
+
       case 'daily':
         return this.shouldRunDaily(targetDate)
 
@@ -30,6 +33,17 @@ export class TaskScheduler {
       default:
         return false
     }
+  }
+
+  /**
+   * 일회성 업무 체크 (마감일이 오늘인 경우에만)
+   */
+  private static shouldRunOnce(task: Task, targetDate: Date): boolean {
+    const dueDate = new Date(task.due_date)
+    const target = new Date(targetDate)
+    
+    // 날짜만 비교 (시간 제외)
+    return dueDate.toDateString() === target.toDateString()
   }
 
   /**
@@ -405,14 +419,16 @@ export function getTasksByPeriod(tasks: Task[]): {
   // 지연된 업무
   const overdueTasks = TaskScheduler.getOverdueTasks(tasks, today)
   
-  // 이번 주 업무 (오늘 제외)
+  // 이번 주 업무 (오늘 제외, 매일 업무 제외)
   const thisWeekTasks: Task[] = []
   const thisWeekStart = getWeekStart(today)
   const thisWeekEnd = getWeekEnd(today)
   
+  // 주기적 업무 처리
   for (let d = new Date(thisWeekStart); d <= thisWeekEnd; d.setDate(d.getDate() + 1)) {
     if (d.toDateString() !== today.toDateString()) { // 오늘 제외
       const dayTasks = TaskScheduler.getTasksForDate(activeTasks, new Date(d))
+        .filter(task => task.frequency !== 'daily') // 매일 업무 제외
       dayTasks.forEach(task => {
         if (!thisWeekTasks.find(existing => existing.id === task.id)) {
           thisWeekTasks.push(task)
@@ -421,14 +437,28 @@ export function getTasksByPeriod(tasks: Task[]): {
     }
   }
   
-  // 이번 달 업무 (오늘, 이번주 제외)
+  // 마감일 기준 이번주 업무 추가
+  activeTasks.forEach(task => {
+    const dueDate = new Date(task.due_date)
+    if (dueDate >= thisWeekStart && dueDate <= thisWeekEnd && 
+        dueDate.toDateString() !== today.toDateString() && // 오늘 제외
+        task.frequency !== 'daily' && // 매일 업무 제외
+        !thisWeekTasks.find(existing => existing.id === task.id) &&
+        !overdueTasks.find(existing => existing.id === task.id)) { // 지연 업무 제외
+      thisWeekTasks.push(task)
+    }
+  })
+  
+  // 이번 달 업무 (오늘, 이번주 제외, 매일 업무 제외)
   const thisMonthTasks: Task[] = []
   const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
   const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
   
+  // 주기적 업무 처리
   for (let d = new Date(thisMonthStart); d <= thisMonthEnd; d.setDate(d.getDate() + 1)) {
     if (d < thisWeekStart || d > thisWeekEnd) { // 이번주 제외
       const dayTasks = TaskScheduler.getTasksForDate(activeTasks, new Date(d))
+        .filter(task => task.frequency !== 'daily') // 매일 업무 제외
       dayTasks.forEach(task => {
         if (!thisMonthTasks.find(existing => existing.id === task.id)) {
           thisMonthTasks.push(task)
@@ -436,6 +466,23 @@ export function getTasksByPeriod(tasks: Task[]): {
       })
     }
   }
+  
+  // 마감일 기준 이번달 업무 추가
+  activeTasks.forEach(task => {
+    const dueDate = new Date(task.due_date)
+    if (dueDate >= thisMonthStart && dueDate <= thisMonthEnd && 
+        (dueDate < thisWeekStart || dueDate > thisWeekEnd) && // 이번주 제외
+        dueDate.toDateString() !== today.toDateString() && // 오늘 제외
+        task.frequency !== 'daily' && // 매일 업무 제외
+        !thisMonthTasks.find(existing => existing.id === task.id) &&
+        !overdueTasks.find(existing => existing.id === task.id)) { // 지연 업무 제외
+      thisMonthTasks.push(task)
+    }
+  })
+  
+  // 날짜순 정렬
+  thisWeekTasks.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+  thisMonthTasks.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
   
   return { todayTasks, overdueTasks, thisWeekTasks, thisMonthTasks }
 }
@@ -456,6 +503,33 @@ function getWeekStart(date: Date): Date {
 function getWeekEnd(date: Date): Date {
   const d = getWeekStart(date)
   return new Date(d.setDate(d.getDate() + 6))
+}
+
+/**
+ * 만료된 일회성 업무 필터링 (마감일이 지난 일회성 업무 제외)
+ */
+export function filterExpiredOnceTasks(tasks: Task[]): Task[] {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // 시간을 00:00:00으로 설정
+  
+  return tasks.filter(task => {
+    // 일회성 업무가 아니면 통과
+    if (task.frequency !== 'once') {
+      return true
+    }
+    
+    // 완료된 일회성 업무는 통과 (완료 기록 보존)
+    if (task.completed) {
+      return true
+    }
+    
+    // 일회성 업무이고 미완료인 경우, 마감일 확인
+    const dueDate = new Date(task.due_date)
+    dueDate.setHours(0, 0, 0, 0) // 시간을 00:00:00으로 설정
+    
+    // 마감일이 오늘 이후거나 오늘인 경우에만 통과
+    return dueDate >= today
+  })
 }
 
 export default TaskScheduler

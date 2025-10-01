@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createApiResponse } from '@/lib/utils'
+import { createApiResponse, getToday } from '@/lib/utils'
+import { filterExpiredOnceTasks } from '@/lib/scheduler'
 import { Task } from '@/types'
 
 // SSL 인증서 검증 우회 설정 (개발 환경용)
@@ -48,9 +49,12 @@ export default async function handler(
     console.log('직접 REST API를 사용하여 tasks 조회...')
 
     // tasks 조회
-    const tasks = await callSupabaseAPI('tasks?order=created_at.asc')
+    const allTasks = await callSupabaseAPI('tasks?order=created_at.asc')
     
-    console.log(`총 ${tasks.length}개 업무 조회됨`)
+    // 만료된 일회성 업무 필터링
+    const tasks = filterExpiredOnceTasks(allTasks)
+    
+    console.log(`총 ${allTasks.length}개 업무 조회됨 (필터링 후: ${tasks.length}개)`)
 
     // 기본 통계 계산
     const now = new Date()

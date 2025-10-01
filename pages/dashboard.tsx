@@ -16,7 +16,7 @@ interface NewTask {
   title: string
   description: string
   assignee: string
-  frequency: 'daily' | 'weekly' | 'monthly'
+  frequency: 'once' | 'daily' | 'weekly' | 'monthly'
   due_date: string
 }
 
