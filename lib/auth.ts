@@ -99,16 +99,42 @@ export function getCurrentUser(): User | null {
   if (typeof window === 'undefined') return null
   
   try {
-    const userStr = localStorage.getItem('currentUser')
-    const token = localStorage.getItem('authToken')
+    // 1. 먼저 localStorage에서 확인
+    let userStr = localStorage.getItem('currentUser')
+    let token = localStorage.getItem('authToken')
     
-    if (!userStr || !token) return null
+    // 2. localStorage에 없으면 쿠키에서 확인 (이메일 자동 로그인용)
+    if (!userStr || !token) {
+      const cookieToken = getCookie('auth-token')
+      const cookieEmail = getCookie('user-email')
+      const cookieName = getCookie('user-name')
+      const cookieRole = getCookie('user-role')
+      
+      if (cookieToken && cookieEmail) {
+        // 쿠키에서 사용자 정보 복원
+        const user: User = {
+          id: 'email-user', // 임시 ID
+          email: cookieEmail,
+          name: cookieName ? decodeURIComponent(cookieName) : cookieEmail.split('@')[0],
+          role: (cookieRole === 'admin' ? 'admin' : 'user') as 'user' | 'admin',
+          created_at: new Date().toISOString()
+        }
+        
+        // localStorage에도 저장 (일관성 유지)
+        localStorage.setItem('currentUser', JSON.stringify(user))
+        localStorage.setItem('authToken', cookieToken)
+        
+        return user
+      }
+      
+      return null
+    }
     
     const user = JSON.parse(userStr)
     const tokenData = verifyToken(token)
     
     if (!tokenData) {
-      // 토큰이 만료된 경우 로컬 스토리지 정리
+      // 토큰이 만료된 경우 스토리지 정리
       localStorage.removeItem('currentUser')
       localStorage.removeItem('authToken')
       return null
@@ -119,6 +145,19 @@ export function getCurrentUser(): User | null {
     console.error('사용자 정보 로드 실패:', error)
     return null
   }
+}
+
+// 쿠키 읽기 헬퍼 함수
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  
+  const value = `; ${document.cookie}`
+  const parts = value.split(`; ${name}=`)
+  if (parts.length === 2) {
+    const cookieValue = parts.pop()?.split(';').shift()
+    return cookieValue || null
+  }
+  return null
 }
 
 // 로그아웃 함수 (완전한 세션 정리)
@@ -143,7 +182,17 @@ export function logout() {
 
 // 인증된 API 요청을 위한 헤더 생성
 export function getAuthHeaders(): Record<string, string> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
+  if (typeof window === 'undefined') {
+    return { 'Content-Type': 'application/json' }
+  }
+  
+  // localStorage에서 먼저 확인
+  let token = localStorage.getItem('authToken')
+  
+  // localStorage에 없으면 쿠키에서 확인
+  if (!token) {
+    token = getCookie('auth-token')
+  }
   
   return {
     'Content-Type': 'application/json',
