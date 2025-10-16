@@ -7,6 +7,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log('이메일 토큰 생성 요청:', { method: req.method, body: req.body })
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
     return res.status(405).json(createApiResponse(false, null, '허용되지 않는 메서드'))
@@ -16,6 +18,7 @@ export default async function handler(
     const { email, purpose, task_id } = req.body
 
     if (!email || !purpose) {
+      console.log('필수 필드 누락:', { email, purpose })
       return res.status(400).json(
         createApiResponse(false, null, '이메일과 목적이 필요합니다.')
       )
@@ -62,6 +65,8 @@ export default async function handler(
     expiresAt.setMinutes(expiresAt.getMinutes() + 5)
 
     // 토큰을 데이터베이스에 저장
+    console.log('토큰 DB 저장 시도:', { token: token.substring(0, 8) + '...', email, purpose })
+    
     const { error: tokenError } = await (supabaseAdmin as any)
       .from('email_tokens')
       .insert([{
@@ -80,6 +85,7 @@ export default async function handler(
       )
     }
 
+    console.log('토큰 생성 성공:', { email, purpose })
     return res.status(200).json(
       createApiResponse(true, { token }, '토큰이 생성되었습니다.')
     )

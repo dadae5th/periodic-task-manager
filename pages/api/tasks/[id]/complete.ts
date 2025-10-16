@@ -114,6 +114,8 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
 
     // 업무 완료 후 자동 로그인 토큰 생성
     try {
+      console.log('토큰 생성 시도:', { email: completedBy, task_id: id })
+      
       const tokenResponse = await fetch(`${appUrl}/api/auth/email-token`, {
         method: 'POST',
         headers: {
@@ -126,15 +128,24 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
         })
       })
 
+      console.log('토큰 응답 상태:', tokenResponse.status)
+
       if (tokenResponse.ok) {
         const tokenData = await tokenResponse.json()
+        console.log('토큰 데이터:', tokenData)
         const token = tokenData.data?.token
 
         if (token) {
           // 토큰과 함께 자동 로그인 페이지로 리디렉션
           const redirectUrl = `${appUrl}/api/auth/email-login?token=${token}&redirect=${encodeURIComponent(`/dashboard?completed_task=${id}&message=${encodeURIComponent('업무가 완료되었습니다!')}`)}`
+          console.log('자동 로그인 리디렉션:', redirectUrl)
           return res.redirect(302, redirectUrl)
+        } else {
+          console.error('토큰이 응답에 없음:', tokenData)
         }
+      } else {
+        const errorText = await tokenResponse.text()
+        console.error('토큰 생성 HTTP 오류:', tokenResponse.status, errorText)
       }
     } catch (tokenError) {
       console.error('자동 로그인 토큰 생성 실패:', tokenError)
