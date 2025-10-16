@@ -6,13 +6,7 @@ import { getCurrentUser } from '@/lib/auth'
 export default function Home() {
   const router = useRouter()
 
-  useEffect(() => {
-    // 이미 로그인된 사용자는 대시보드로 리다이렉트
-    const user = getCurrentUser()
-    if (user) {
-      router.push('/dashboard')
-    }
-  }, [router])
+  // 메인 페이지에서는 항상 로그인 화면을 보여줌 (다중 사용자 환경)
 
   return (
     <div>
