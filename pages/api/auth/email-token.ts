@@ -56,10 +56,10 @@ export default async function handler(
       )
     }
 
-    // 일회용 토큰 생성 (30분 유효)
+    // 일회용 토큰 생성 (5분 유효 - 보안상 짧게 설정)
     const token = crypto.randomBytes(32).toString('hex')
     const expiresAt = new Date()
-    expiresAt.setMinutes(expiresAt.getMinutes() + 30)
+    expiresAt.setMinutes(expiresAt.getMinutes() + 5)
 
     // 토큰을 데이터베이스에 저장
     const { error: tokenError } = await (supabaseAdmin as any)
