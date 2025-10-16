@@ -270,7 +270,7 @@ export default function Dashboard() {
 
     setIsSubmitting(true)
     try {
-      const response = await fetch('/api/tasks', {
+      const response = await fetch('/api/tasks/create', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(newTask)

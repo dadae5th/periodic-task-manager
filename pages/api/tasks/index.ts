@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createApiResponse, getToday } from '@/lib/utils'
 import { filterExpiredOnceTasks } from '@/lib/scheduler'
+import { withAuth, AuthenticatedRequest } from '@/lib/auth'
 import { Task } from '@/types'
 
 // SSL 인증서 검증 우회 설정 (개발 환경용)
@@ -36,20 +37,34 @@ async function callSupabaseAPI(endpoint: string, options: any = {}) {
   return response.json()
 }
 
-export default async function handler(
-  req: NextApiRequest,
+async function handler(
+  req: AuthenticatedRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'GET') {
+  if (req.method === 'GET') {
+    return handleGetTasks(req, res)
+  } else {
+    res.setHeader('Allow', ['GET'])
     return res.status(405).json(createApiResponse(false, null, '허용되지 않는 메서드'))
   }
+}
+
+async function handleGetTasks(req: AuthenticatedRequest, res: NextApiResponse) {
 
   try {
     console.log('Tasks API called:', new Date().toISOString(), req.method)
-    console.log('직접 REST API를 사용하여 tasks 조회...')
+    console.log('사용자별 tasks 조회...', req.user?.email)
 
-    // tasks 조회
-    const allTasks = await callSupabaseAPI('tasks?order=created_at.asc')
+    // 현재 사용자의 업무만 조회 (assignee가 사용자 이메일이거나 'all'인 경우)
+    const userEmail = req.user?.email
+    let query = 'tasks?order=created_at.asc'
+    
+    // 관리자는 모든 업무를 볼 수 있고, 일반 사용자는 자신의 업무만
+    if (req.user?.role !== 'admin') {
+      query += `&or=(assignee.eq.${encodeURIComponent(userEmail!)},assignee.eq.all)`
+    }
+    
+    const allTasks = await callSupabaseAPI(query)
     
     // 만료된 일회성 업무 필터링
     const tasks = filterExpiredOnceTasks(allTasks)
@@ -151,3 +166,5 @@ export default async function handler(
     }, 'Mock 데이터를 반환했습니다.'))
   }
 }
+
+export default withAuth(handler)

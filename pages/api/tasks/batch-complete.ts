@@ -2,9 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createApiResponse } from '@/lib/utils'
 import { Task } from '@/types'
+import { withAuth, AuthenticatedRequest } from '@/lib/auth'
 
-export default async function handler(
-  req: NextApiRequest,
+async function handler(
+  req: AuthenticatedRequest,
   res: NextApiResponse
 ) {
   if (req.method !== 'POST' && req.method !== 'GET') {
@@ -327,5 +328,19 @@ async function processBatchCompletion(task_ids: string[], completed_by: string, 
       due_date: task.due_date
     })),
     completion_records: completionRecords
+  }
+}
+
+// GET 요청(이메일에서)은 인증 불필요, POST 요청은 인증 필요
+export default async function wrappedHandler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method === 'GET') {
+    // GET 요청은 인증 없이 처리 (이메일에서 오는 요청)
+    return handler(req as AuthenticatedRequest, res)
+  } else {
+    // POST 요청은 인증 필요
+    return withAuth(handler)(req, res)
   }
 }

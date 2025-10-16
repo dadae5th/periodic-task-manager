@@ -2,9 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createApiResponse } from '@/lib/utils'
 import { getEmailService } from '@/lib/email'
+import { withAuth, AuthenticatedRequest } from '@/lib/auth'
 
-export default async function handler(
-  req: NextApiRequest,
+async function handler(
+  req: AuthenticatedRequest,
   res: NextApiResponse
 ) {
   const { method } = req
@@ -32,9 +33,9 @@ export default async function handler(
 /**
  * 개별 업무 조회
  */
-async function handleGet(req: NextApiRequest, res: NextApiResponse, id: string) {
+async function handleGet(req: AuthenticatedRequest, res: NextApiResponse, id: string) {
   try {
-    const { data: task, error } = await supabaseAdmin
+    const { data: task, error } = await (supabaseAdmin as any)
       .from('tasks')
       .select('*')
       .eq('id', id)
@@ -53,6 +54,13 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, id: string) 
       )
     }
 
+    // 사용자 권한 체크: 자신의 업무만 볼 수 있음 (관리자 제외)
+    if (req.user?.role !== 'admin' && task.assignee !== req.user?.email && task.assignee !== 'all') {
+      return res.status(403).json(
+        createApiResponse(false, null, '이 업무를 조회할 권한이 없습니다.')
+      )
+    }
+
     return res.status(200).json(createApiResponse(true, task))
   } catch (error) {
     console.error('업무 조회 중 오류:', error)
@@ -65,9 +73,36 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, id: string) 
 /**
  * 업무 수정
  */
-async function handlePut(req: NextApiRequest, res: NextApiResponse, id: string) {
+async function handlePut(req: AuthenticatedRequest, res: NextApiResponse, id: string) {
   try {
     const { title, description, assignee, frequency, frequency_details, due_date, completed } = req.body
+
+    // 먼저 기존 업무를 조회하여 권한 확인
+    const { data: existingTask, error: fetchError } = await (supabaseAdmin as any)
+      .from('tasks')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) {
+      if (fetchError.code === 'PGRST116') {
+        return res.status(404).json(
+          createApiResponse(false, null, '업무를 찾을 수 없습니다.')
+        )
+      }
+      
+      console.error('업무 조회 실패:', fetchError)
+      return res.status(500).json(
+        createApiResponse(false, null, '업무 조회에 실패했습니다.', fetchError.message)
+      )
+    }
+
+    // 사용자 권한 체크: 자신의 업무만 수정할 수 있음 (관리자 제외)
+    if (req.user?.role !== 'admin' && existingTask.assignee !== req.user?.email && existingTask.assignee !== 'all') {
+      return res.status(403).json(
+        createApiResponse(false, null, '이 업무를 수정할 권한이 없습니다.')
+      )
+    }
 
     const updates: any = {
       updated_at: new Date().toISOString()
@@ -116,12 +151,12 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse, id: string) 
 /**
  * 업무 삭제
  */
-async function handleDelete(req: NextApiRequest, res: NextApiResponse, id: string) {
+async function handleDelete(req: AuthenticatedRequest, res: NextApiResponse, id: string) {
   try {
     // 먼저 업무가 존재하는지 확인
     const { data: existingTask, error: fetchError } = await (supabaseAdmin as any)
       .from('tasks')
-      .select('id, title')
+      .select('*')
       .eq('id', id)
       .single()
 
@@ -135,6 +170,13 @@ async function handleDelete(req: NextApiRequest, res: NextApiResponse, id: strin
       console.error('업무 확인 실패:', fetchError)
       return res.status(500).json(
         createApiResponse(false, null, '업무 확인에 실패했습니다.', fetchError.message)
+      )
+    }
+
+    // 사용자 권한 체크: 자신의 업무만 삭제할 수 있음 (관리자 제외)
+    if (req.user?.role !== 'admin' && existingTask.assignee !== req.user?.email && existingTask.assignee !== 'all') {
+      return res.status(403).json(
+        createApiResponse(false, null, '이 업무를 삭제할 권한이 없습니다.')
       )
     }
 
@@ -172,3 +214,5 @@ async function handleDelete(req: NextApiRequest, res: NextApiResponse, id: strin
     )
   }
 }
+
+export default withAuth(handler)

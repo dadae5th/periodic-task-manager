@@ -3,27 +3,29 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { createApiResponse } from '@/lib/utils'
 import { getEmailService } from '@/lib/email'
 import { TaskScheduler } from '@/lib/scheduler'
+import { withAuth, AuthenticatedRequest } from '@/lib/auth'
 
-export default async function handler(
-  req: NextApiRequest,
+async function handler(
+  req: AuthenticatedRequest,
   res: NextApiResponse
-) {
+): Promise<void> {
   const { method } = req
   const { id } = req.query
 
   if (!id || typeof id !== 'string') {
-    return res.status(400).json(
+    res.status(400).json(
       createApiResponse(false, null, '업무 ID가 필요합니다.')
     )
+    return
   }
 
   if (method === 'POST') {
-    return handleComplete(req, res, id)
+    await handleComplete(req, res, id)
   } else if (method === 'GET') {
-    return handleCompleteFromEmail(req, res, id)
+    await handleCompleteFromEmail(req, res, id)
   } else {
     res.setHeader('Allow', ['GET', 'POST'])
-    return res.status(405).json(createApiResponse(false, null, '허용되지 않는 메서드'))
+    res.status(405).json(createApiResponse(false, null, '허용되지 않는 메서드'))
   }
 }
 
@@ -115,7 +117,7 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
 /**
  * 업무 완료 처리
  */
-async function handleComplete(req: NextApiRequest, res: NextApiResponse, id: string) {
+async function handleComplete(req: AuthenticatedRequest, res: NextApiResponse, id: string) {
   try {
     const { completed_by, notes, notify_email } = req.body
 
@@ -148,6 +150,13 @@ async function handleComplete(req: NextApiRequest, res: NextApiResponse, id: str
     if (task.completed) {
       return res.status(400).json(
         createApiResponse(false, null, '이미 완료된 업무입니다.')
+      )
+    }
+
+    // 사용자 권한 체크: 자신의 업무만 완료할 수 있음 (관리자 제외)
+    if (req.user?.role !== 'admin' && task.assignee !== req.user?.email && task.assignee !== 'all') {
+      return res.status(403).json(
+        createApiResponse(false, null, '이 업무를 완료할 권한이 없습니다.')
       )
     }
 
@@ -243,5 +252,19 @@ async function handleComplete(req: NextApiRequest, res: NextApiResponse, id: str
     return res.status(500).json(
       createApiResponse(false, null, '서버 오류가 발생했습니다.')
     )
+  }
+}
+
+// POST 요청만 인증 필요, GET 요청(이메일에서)은 인증 불필요
+export default async function wrappedHandler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method === 'GET') {
+    // GET 요청은 인증 없이 처리 (이메일에서 오는 요청)
+    return handler(req as AuthenticatedRequest, res)
+  } else {
+    // POST 요청은 인증 필요
+    return withAuth(handler)(req, res)
   }
 }
