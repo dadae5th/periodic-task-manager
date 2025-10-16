@@ -60,6 +60,19 @@ CREATE TABLE email_logs (
     results JSONB
 );
 
+-- 이메일 인증 토큰 테이블 (일회용 로그인)
+CREATE TABLE email_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    token VARCHAR(64) UNIQUE NOT NULL,
+    user_email VARCHAR(255) NOT NULL,
+    purpose VARCHAR(50) NOT NULL, -- 'task_completion', 'login' 등
+    task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    used_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Cron 작업 로그 테이블
 CREATE TABLE cron_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -92,6 +105,11 @@ CREATE INDEX idx_email_logs_sent_at ON email_logs(sent_at);
 
 CREATE INDEX idx_cron_logs_type ON cron_logs(type);
 CREATE INDEX idx_cron_logs_executed_at ON cron_logs(executed_at);
+
+CREATE INDEX idx_email_tokens_token ON email_tokens(token);
+CREATE INDEX idx_email_tokens_user_email ON email_tokens(user_email);
+CREATE INDEX idx_email_tokens_expires_at ON email_tokens(expires_at);
+CREATE INDEX idx_email_tokens_used ON email_tokens(used);
 
 -- updated_at 자동 업데이트 함수
 CREATE OR REPLACE FUNCTION update_updated_at_column()

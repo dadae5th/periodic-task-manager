@@ -30,6 +30,19 @@ export function verifyToken(token: string): User | null {
   }
 }
 
+// 토큰 생성 함수
+export function generateToken(user: User): string {
+  const payload = {
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    exp: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7일 후 만료
+  }
+  
+  return Buffer.from(JSON.stringify(payload)).toString('base64')
+}
+
 // 인증 미들웨어
 export function withAuth(handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void>) {
   return async (req: AuthenticatedRequest, res: NextApiResponse) => {
