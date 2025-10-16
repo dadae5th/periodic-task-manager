@@ -21,8 +21,11 @@ CREATE INDEX IF NOT EXISTS idx_email_tokens_used ON email_tokens(used);
 -- RLS 정책 설정
 ALTER TABLE email_tokens ENABLE ROW LEVEL SECURITY;
 
+-- 기존 정책이 있다면 삭제 후 재생성
+DROP POLICY IF EXISTS "Allow all operations on email_tokens" ON email_tokens;
+
 -- 모든 사용자가 접근 가능하도록 설정 (서비스 역할 키로 접근)
-CREATE POLICY IF NOT EXISTS "Allow all operations on email_tokens" ON email_tokens
+CREATE POLICY "Allow all operations on email_tokens" ON email_tokens
     FOR ALL USING (true);
 
 SELECT 'email_tokens 테이블이 성공적으로 생성되었습니다!' as message;
