@@ -720,22 +720,26 @@ export default function Dashboard() {
                     />
                   </div>
 
-                  {/* 주기 */}
+                  {/* 업무 유형 선택 */}
                   <div>
                     <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-1">
-                      업무 유형
+                      <strong>반복 주기 (필수)</strong>
                     </label>
                     <select
                       id="frequency"
                       value={newTask.frequency}
                       onChange={(e) => setNewTask({ ...newTask, frequency: e.target.value as 'once' | 'daily' | 'weekly' | 'monthly' })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border-2 border-blue-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 font-semibold"
+                      style={{ fontSize: '15px' }}
                     >
-                      <option value="once">일회성</option>
-                      <option value="daily">매일</option>
-                      <option value="weekly">매주</option>
-                      <option value="monthly">매월</option>
+                      <option value="once">● 일회성 (한 번만 실행)</option>
+                      <option value="daily">○ 매일</option>
+                      <option value="weekly">○ 매주</option>
+                      <option value="monthly">○ 매월</option>
                     </select>
+                    <p className="text-xs text-blue-600 mt-1">
+                      💡 일회성: 마감일에만 실행됩니다
+                    </p>
                   </div>
 
                   {/* 마감일 */}
