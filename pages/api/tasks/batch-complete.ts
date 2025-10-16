@@ -22,6 +22,9 @@ async function handler(
     if (req.method === 'GET') {
       const { tasks, completed_by: completedByParam } = req.query
       
+      console.log(`[BATCH_COMPLETE] GET 요청 수신 - IP: ${req.headers['x-forwarded-for'] || req.connection.remoteAddress}, User-Agent: ${req.headers['user-agent']}`)
+      console.log(`[BATCH_COMPLETE] GET 파라미터 - tasks: ${tasks}, completed_by: ${completedByParam}`)
+      
       if (!tasks || typeof tasks !== 'string') {
         return res.status(400).json(
           createApiResponse(false, null, '완료할 업무 ID 목록이 필요합니다.')
@@ -55,6 +58,9 @@ async function handler(
     } else {
       // POST 요청 (폼 데이터)
       const body = req.body
+      
+      console.log(`[BATCH_COMPLETE] POST 요청 수신 - IP: ${req.headers['x-forwarded-for'] || req.connection.remoteAddress}, User-Agent: ${req.headers['user-agent']}`)
+      console.log(`[BATCH_COMPLETE] POST 본문:`, JSON.stringify(body))
       
       // 폼에서 오는 경우 task_ids는 문자열 배열 또는 단일 문자열일 수 있음
       const formTaskIds = body.task_ids
@@ -115,7 +121,9 @@ async function handler(
 }
 
 async function processBatchCompletion(task_ids: string[], completed_by: string, notify_email?: string) {
-  console.log(`Batch completing ${task_ids.length} tasks by ${completed_by}`)
+  const timestamp = new Date().toLocaleString('ko-KR')
+  console.log(`[BATCH_COMPLETE] ${timestamp} - 일괄완료 시작: ${task_ids.length}개 업무, 완료자: ${completed_by}, 알림이메일: ${notify_email || '없음'}`)
+  console.log(`[BATCH_COMPLETE] 업무 ID 목록: ${task_ids.join(', ')}`)
 
   // UUID 형식 검증 및 Mock ID 처리
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -296,8 +304,12 @@ async function processBatchCompletion(task_ids: string[], completed_by: string, 
     }
   }
 
-  // 3. 완료 알림 이메일 발송 (선택적)
-  if (notify_email && completedTasks.length > 0) {
+  // 3. 완료 알림 이메일 발송 (선택적) - 현재 비활성화됨
+  // TODO: 일괄완료 알림 메일이 불필요하게 발송되는 문제로 인해 임시 비활성화
+  // 필요시 ENABLE_BATCH_COMPLETION_EMAIL 환경변수로 활성화 가능
+  const shouldSendEmail = process.env.ENABLE_BATCH_COMPLETION_EMAIL === 'true'
+  
+  if (shouldSendEmail && notify_email && completedTasks.length > 0) {
     try {
       const { getEmailService } = await import('@/lib/email')
       const emailService = getEmailService()
@@ -307,10 +319,13 @@ async function processBatchCompletion(task_ids: string[], completed_by: string, 
         completedTasks,
         completed_by
       )
+      console.log(`일괄완료 알림 이메일 발송: ${notify_email}에게 ${completedTasks.length}개 업무 완료 알림`)
     } catch (emailError) {
       console.error('완료 알림 이메일 발송 실패:', emailError)
       // 이메일 실패는 전체 작업을 실패로 처리하지 않음
     }
+  } else if (completedTasks.length > 0) {
+    console.log(`일괄완료 알림 이메일 비활성화됨: ${completedTasks.length}개 업무 완료되었지만 알림 미발송`)
   }
 
   const successCount = completedTasks.length
