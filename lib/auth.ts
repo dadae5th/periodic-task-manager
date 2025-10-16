@@ -163,6 +163,8 @@ function getCookie(name: string): string | null {
 // 로그아웃 함수 (완전한 세션 정리)
 export function logout() {
   if (typeof window !== 'undefined') {
+    console.log('로그아웃 시작...')
+    
     // 로컬 스토리지 완전 정리
     localStorage.removeItem('currentUser')
     localStorage.removeItem('authToken')
@@ -170,10 +172,18 @@ export function logout() {
     // 세션 스토리지도 정리 (있다면)
     sessionStorage.clear()
     
-    // 쿠키 정리 (auth 관련)
+    // 인증 관련 쿠키들을 명시적으로 삭제
+    const authCookies = ['auth-token', 'user-email', 'user-name', 'user-role']
+    authCookies.forEach(cookieName => {
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`
+    })
+    
+    // 전체 쿠키 정리 (백업용)
     document.cookie.split(";").forEach(function(c) { 
       document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
     });
+    
+    console.log('로그아웃 완료: 모든 인증 정보 정리됨')
     
     // 페이지 리로드로 완전한 초기화
     window.location.replace('/login')

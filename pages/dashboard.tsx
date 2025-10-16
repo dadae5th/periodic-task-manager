@@ -95,6 +95,63 @@ export default function Dashboard() {
     setNewTask(prev => ({ ...prev, assignee: user.email }))
   }, [router])
 
+  // 브라우저/탭 닫기시 자동 로그아웃
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // 메일에서 온 세션인지 확인 (쿠키 기반 로그인)
+      const hasEmailSession = document.cookie.includes('auth-token')
+      
+      if (hasEmailSession) {
+        // 메일에서 온 세션인 경우 자동 로그아웃
+        try {
+          logout()
+          console.log('메일 세션 자동 로그아웃 완료')
+        } catch (error) {
+          console.error('자동 로그아웃 실패:', error)
+        }
+      }
+      
+      // 브라우저가 닫히기 전에 정리 작업 수행
+      // 참고: beforeunload에서는 경고 메시지를 표시하지 않음
+    }
+
+    const handleVisibilityChange = () => {
+      // 탭이 숨겨졌다가 다시 보여질 때 세션 유효성 검사
+      if (!document.hidden) {
+        const user = getCurrentUser()
+        if (!user) {
+          router.push('/login')
+        }
+      }
+    }
+
+    // 이벤트 리스너 등록
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // 페이지를 벗어날 때 정리 (SPA 내에서의 라우팅도 포함)
+    const handleRouteChangeStart = () => {
+      const hasEmailSession = document.cookie.includes('auth-token')
+      if (hasEmailSession && router.asPath !== '/dashboard') {
+        try {
+          logout()
+          console.log('라우트 변경시 메일 세션 로그아웃')
+        } catch (error) {
+          console.error('라우트 변경 로그아웃 실패:', error)
+        }
+      }
+    }
+
+    router.events.on('routeChangeStart', handleRouteChangeStart)
+
+    // 정리 함수
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      router.events.off('routeChangeStart', handleRouteChangeStart)
+    }
+  }, [router])
+
   // 초기 데이터 로딩
   const loadInitialData = async () => {
     setLoading(true)
