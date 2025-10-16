@@ -61,6 +61,35 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     const createdTasks = await response.json()
     const createdTask = createdTasks[0]
 
+    // 업무 생성 후 담당자에게 즉시 이메일 발송
+    try {
+      const { getEmailService } = await import('@/lib/email')
+      const emailService = getEmailService()
+      
+      // 오늘 마감인 업무인지 확인하여 이메일 발송
+      const taskDueDate = new Date(createdTask.due_date)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      taskDueDate.setHours(0, 0, 0, 0)
+      
+      if (taskDueDate.getTime() === today.getTime()) {
+        // 오늘 마감인 경우만 즉시 이메일 발송
+        await emailService.sendDailyTaskEmail(
+          createdTask.assignee,
+          [createdTask], // 오늘 업무
+          [], // 지연 업무
+          [], // 이번주 업무  
+          [] // 이번달 업무
+        )
+        console.log(`새 업무 알림 이메일 발송됨: ${createdTask.assignee} (오늘 마감)`)
+      } else {
+        console.log(`업무 생성됨 (${createdTask.due_date} 마감) - 일일 이메일로 발송 예정`)
+      }
+    } catch (emailError) {
+      console.error('업무 생성 알림 이메일 발송 실패:', emailError)
+      // 이메일 발송 실패는 업무 생성을 실패로 처리하지 않음
+    }
+
     return res.status(201).json(
       createApiResponse(true, createdTask, '업무가 성공적으로 생성되었습니다.')
     )
