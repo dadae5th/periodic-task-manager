@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '../../../lib/supabase'
 import { createApiResponse } from '../../../lib/utils'
+import { withAuth, AuthenticatedRequest } from '../../../lib/auth'
 
-export default async function handler(
-  req: NextApiRequest,
+async function handler(
+  req: AuthenticatedRequest,
   res: NextApiResponse
 ) {
   // UTF-8 인코딩 설정
@@ -30,13 +31,23 @@ export default async function handler(
 
     console.log('Querying completions between:', todayStr, 'and', tomorrowStr)
 
-    // 오늘 완료된 업무 개수 조회
-    const { data, error, count } = await supabaseAdmin
+    const userEmail = req.user?.email
+    console.log('Filtering completions for user:', userEmail)
+
+    // 오늘 완료된 업무 개수 조회 (사용자별 필터링)
+    let query = supabaseAdmin
       .from('task_completions')
       .select('id, task_id, completed_by, completed_at, tasks(title)', { count: 'exact' })
       .gte('completed_at', todayStr)
       .lt('completed_at', tomorrowStr)
       .order('completed_at', { ascending: false })
+
+    // 관리자가 아닌 경우 자신이 완료한 업무만 조회
+    if (req.user?.role !== 'admin' && userEmail) {
+      query = query.eq('completed_by', userEmail)
+    }
+
+    const { data, error, count } = await query
 
     if (error) {
       console.error('Completions query error:', error)
@@ -62,3 +73,5 @@ export default async function handler(
     )
   }
 }
+
+export default withAuth(handler)

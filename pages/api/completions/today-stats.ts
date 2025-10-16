@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '../../../lib/supabase'
 import { createApiResponse } from '../../../lib/utils'
+import { withAuth, AuthenticatedRequest } from '../../../lib/auth'
 
-export default async function handler(
-  req: NextApiRequest,
+async function handler(
+  req: AuthenticatedRequest,
   res: NextApiResponse
 ) {
   // UTF-8 인코딩 설정
@@ -30,11 +31,21 @@ export default async function handler(
 
     console.log('Calculating today stats for date:', todayStr)
 
-    // 1. 오늘 마감인 업무들 조회
-    const { data: todayTasks, error: tasksError } = await supabaseAdmin
+    const userEmail = req.user?.email
+    console.log('Filtering tasks for user:', userEmail)
+
+    // 1. 오늘 마감인 업무들 조회 (사용자별 필터링)
+    let tasksQuery = supabaseAdmin
       .from('tasks')
       .select('id, title, due_date')
       .eq('due_date', todayStr)
+
+    // 관리자가 아닌 경우 자신의 업무만 조회
+    if (req.user?.role !== 'admin' && userEmail) {
+      tasksQuery = tasksQuery.or(`assignee.eq.${userEmail},assignee.eq.all`)
+    }
+
+    const { data: todayTasks, error: tasksError } = await tasksQuery
 
     if (tasksError) {
       console.error('Today tasks query error:', tasksError)
@@ -65,12 +76,19 @@ export default async function handler(
     console.log('Filtering completions between:', todayStartStr, 'and', tomorrowStartStr)
     console.log('Today task IDs to match:', todayTaskIds)
     
-    const { data: completions, error: completionsError } = await supabaseAdmin
+    let completionsQuery = supabaseAdmin
       .from('task_completions')
       .select('id, task_id, completed_by, completed_at, tasks(title, due_date)')
       .gte('completed_at', todayStartStr)
       .lt('completed_at', tomorrowStartStr)
       .in('task_id', todayTaskIds)
+
+    // 관리자가 아닌 경우 자신이 완료한 업무만 조회
+    if (req.user?.role !== 'admin' && userEmail) {
+      completionsQuery = completionsQuery.eq('completed_by', userEmail)
+    }
+
+    const { data: completions, error: completionsError } = await completionsQuery
 
     if (completionsError) {
       console.error('Today completions query error:', completionsError)
@@ -106,3 +124,5 @@ export default async function handler(
     )
   }
 }
+
+export default withAuth(handler)
