@@ -1,6 +1,19 @@
+import { useEffect } from 'react'
+import { useRouter } from 'next/router'
 import Head from 'next/head'
+import { getCurrentUser } from '@/lib/auth'
 
 export default function Home() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // 이미 로그인된 사용자는 대시보드로 리다이렉트
+    const user = getCurrentUser()
+    if (user) {
+      router.push('/dashboard')
+    }
+  }, [router])
+
   return (
     <div>
       <Head>
@@ -55,7 +68,7 @@ export default function Home() {
           <div style={{ textAlign: 'center' }}>
             <div style={{ marginBottom: '20px' }}>
               <a
-                href="/dashboard"
+                href="/login"
                 style={{
                   display: 'inline-block',
                   backgroundColor: '#2563eb',
@@ -69,7 +82,7 @@ export default function Home() {
                   transition: 'background-color 0.2s'
                 }}
               >
-                📊 대시보드 시작하기
+                � 로그인 / 회원가입
               </a>
               
               <a

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
-import { Task, ApiResponse } from '@/types'
+import { useRouter } from 'next/router'
+import { Task, ApiResponse, User } from '@/types'
+import { getCurrentUser, logout, getAuthHeaders } from '@/lib/auth'
 
 interface DashboardStats {
   total_tasks: number
@@ -47,6 +49,8 @@ const getFrequencyDescription = (frequency: string): string => {
 }
 
 export default function Dashboard() {
+  const router = useRouter()
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set())
   const [stats, setStats] = useState<DashboardStats>({
@@ -75,10 +79,21 @@ export default function Dashboard() {
   const [newTask, setNewTask] = useState<NewTask>({
     title: '',
     description: '',
-    assignee: 'bae.jae.kwon@drbworld.com',
+    assignee: '',
     frequency: 'once',
     due_date: new Date().toISOString().split('T')[0]
   })
+
+  // 사용자 인증 체크
+  useEffect(() => {
+    const user = getCurrentUser()
+    if (!user) {
+      router.push('/login')
+      return
+    }
+    setCurrentUser(user)
+    setNewTask(prev => ({ ...prev, assignee: user.email }))
+  }, [router])
 
   // 초기 데이터 로딩
   const loadInitialData = async () => {
@@ -88,9 +103,7 @@ export default function Dashboard() {
       console.log('Fetching tasks from API...')
       const tasksResponse = await fetch('/api/tasks', {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
       })
       
       console.log('API Response status:', tasksResponse.status)
@@ -109,17 +122,13 @@ export default function Dashboard() {
         // 통계 계산을 위해 완료 기록도 가져오기
         const completionsResponse = await fetch('/api/completions/today', {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: getAuthHeaders(),
         })
         
         // 오늘 업무 통계 가져오기
         const todayStatsResponse = await fetch('/api/completions/today-stats', {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: getAuthHeaders(),
         })
         
         let completedToday = 0
@@ -200,9 +209,7 @@ export default function Dashboard() {
     try {
       const response = await fetch(`/api/tasks/${taskId}/complete`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           completed_by: completedBy,
           notify_email: completedBy
@@ -231,7 +238,8 @@ export default function Dashboard() {
 
     try {
       const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAuthHeaders()
       })
 
       const result: ApiResponse = await response.json()
@@ -264,9 +272,7 @@ export default function Dashboard() {
     try {
       const response = await fetch('/api/tasks', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(newTask)
       })
 
@@ -277,7 +283,7 @@ export default function Dashboard() {
         setNewTask({
           title: '',
           description: '',
-          assignee: 'bae.jae.kwon@drbworld.com',
+          assignee: currentUser?.email || '',
           frequency: 'once',
           due_date: new Date().toISOString().split('T')[0]
         })
@@ -301,7 +307,7 @@ export default function Dashboard() {
     setNewTask({
       title: '',
       description: '',
-      assignee: 'bae.jae.kwon@drbworld.com',
+      assignee: currentUser?.email || '',
       frequency: 'once',
       due_date: new Date().toISOString().split('T')[0]
     })
@@ -363,6 +369,18 @@ export default function Dashboard() {
     }
   }, [])
 
+  // 로그인하지 않은 경우 렌더링하지 않음
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">로그인 확인 중...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
       <Head>
@@ -379,13 +397,38 @@ export default function Dashboard() {
               <h1 className="text-2xl font-bold text-gray-900">
                 📋 업무 관리 대시보드
               </h1>
-              <div className="text-sm text-gray-500">
-                {new Date().toLocaleDateString('ko-KR', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  weekday: 'long'
-                })}
+              
+              <div className="flex items-center space-x-4">
+                {/* 사용자 정보 */}
+                {currentUser && (
+                  <div className="flex items-center space-x-3">
+                    <div className="text-sm">
+                      <div className="font-medium text-gray-900">{currentUser.name}</div>
+                      <div className="text-gray-500">{currentUser.email}</div>
+                    </div>
+                    {currentUser.role === 'admin' && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        관리자
+                      </span>
+                    )}
+                    <button
+                      onClick={logout}
+                      className="text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded px-3 py-1 hover:bg-gray-50"
+                    >
+                      로그아웃
+                    </button>
+                  </div>
+                )}
+                
+                {/* 날짜 */}
+                <div className="text-sm text-gray-500">
+                  {new Date().toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                  })}
+                </div>
               </div>
             </div>
           </div>
@@ -521,6 +564,15 @@ export default function Dashboard() {
                   >
                     {loading ? '새로고침 중...' : '새로고침'}
                   </button>
+                  
+                  {currentUser?.role === 'admin' && (
+                    <button
+                      onClick={() => router.push('/users')}
+                      className="px-4 py-2 bg-purple-500 text-white rounded-md text-sm font-medium hover:bg-purple-600 mr-2"
+                    >
+                      👥 사용자 관리
+                    </button>
+                  )}
                   
                   <button
                     onClick={() => setShowAddModal(true)}
