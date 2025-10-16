@@ -14,10 +14,17 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
   }
 
   try {
+    console.log('업무 생성 요청 시작:', {
+      user: req.user?.email,
+      userRole: req.user?.role,
+      body: req.body
+    })
+
     const { title, description, assignee, frequency, due_date } = req.body
 
     // 입력 검증
     if (!title || !assignee || !frequency || !due_date) {
+      console.log('필수 필드 누락:', { title, assignee, frequency, due_date })
       return res.status(400).json(
         createApiResponse(false, null, '필수 필드가 누락되었습니다.')
       )
@@ -41,6 +48,8 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       completed: false
     }
 
+    console.log('Supabase에 업무 생성 요청:', newTask)
+
     const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/tasks`, {
       method: 'POST',
       headers: {
@@ -52,10 +61,18 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       body: JSON.stringify(newTask)
     })
 
+    console.log('Supabase 응답 상태:', response.status)
+
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('업무 생성 실패:', errorText)
-      throw new Error(`업무 생성 실패: ${response.status}`)
+      console.error('업무 생성 실패:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      })
+      return res.status(response.status).json(
+        createApiResponse(false, null, `업무 생성 실패: ${errorText}`)
+      )
     }
 
     const createdTasks = await response.json()
