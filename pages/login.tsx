@@ -17,6 +17,17 @@ export default function Login() {
     const currentUser = localStorage.getItem('currentUser')
     if (currentUser) {
       router.push('/dashboard')
+      return
+    }
+
+    // URL 파라미터에서 메시지 처리
+    const { message, error: urlError } = router.query
+    if (message && typeof message === 'string') {
+      // 성공 메시지는 콘솔에만 표시 (UI는 깔끔하게 유지)
+      console.log('알림:', message)
+    }
+    if (urlError && typeof urlError === 'string') {
+      setError(urlError)
     }
   }, [router])
 

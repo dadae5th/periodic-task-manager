@@ -40,36 +40,7 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
       return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/login?error=${encodeURIComponent('완료자 정보가 필요합니다.')}`)
     }
 
-    // 일회용 토큰 생성하여 자동 로그인 처리
-    try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
-      
-      const tokenResponse = await fetch(`${appUrl}/api/auth/email-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: completed_by,
-          purpose: 'task_completion',
-          task_id: id
-        })
-      })
-
-      if (tokenResponse.ok) {
-        const tokenData = await tokenResponse.json()
-        const token = tokenData.data?.token
-
-        if (token) {
-          // 토큰과 함께 자동 로그인 페이지로 리디렉션
-          const redirectUrl = `${appUrl}/api/auth/email-login?token=${token}&redirect=${encodeURIComponent(`/dashboard?completed_task=${id}&message=${encodeURIComponent('업무가 완료되었습니다!')}`)}`
-          return res.redirect(302, redirectUrl)
-        }
-      }
-    } catch (tokenError) {
-      console.error('토큰 생성 실패:', tokenError)
-      // 토큰 생성 실패 시 기존 방식으로 처리
-    }
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
 
     // 먼저 업무 정보 조회
     const { data: task, error: fetchError } = await (supabaseAdmin as any)
@@ -138,14 +109,43 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
         .delete()
         .eq('id', completion.id)
       
-      return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?error=update_failed`)
+      return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('업무 업데이트에 실패했습니다.')}`)
     }
 
-    // 성공 시 대시보드로 리다이렉트
-    return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?message=task_completed&task=${encodeURIComponent(task.title)}`)
+    // 업무 완료 후 자동 로그인 토큰 생성
+    try {
+      const tokenResponse = await fetch(`${appUrl}/api/auth/email-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: completedBy,
+          purpose: 'task_completion',
+          task_id: id
+        })
+      })
+
+      if (tokenResponse.ok) {
+        const tokenData = await tokenResponse.json()
+        const token = tokenData.data?.token
+
+        if (token) {
+          // 토큰과 함께 자동 로그인 페이지로 리디렉션
+          const redirectUrl = `${appUrl}/api/auth/email-login?token=${token}&redirect=${encodeURIComponent(`/dashboard?completed_task=${id}&message=${encodeURIComponent('업무가 완료되었습니다!')}`)}`
+          return res.redirect(302, redirectUrl)
+        }
+      }
+    } catch (tokenError) {
+      console.error('자동 로그인 토큰 생성 실패:', tokenError)
+    }
+
+    // 토큰 생성 실패 시 성공 메시지와 함께 로그인 페이지로
+    return res.redirect(302, `${appUrl}/login?message=${encodeURIComponent('업무가 완료되었습니다. 대시보드를 보시려면 로그인해주세요.')}&completed_task=${id}`)
   } catch (error) {
     console.error('업무 완료 처리 중 오류:', error)
-    return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?error=server_error`)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
+    return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('업무 완료 처리 중 오류가 발생했습니다.')}`)
   }
 }
 

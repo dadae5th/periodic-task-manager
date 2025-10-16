@@ -22,13 +22,35 @@ export default async function handler(
     }
 
     // 사용자 존재 확인
-    const { data: user, error: userError } = await (supabaseAdmin as any)
+    let { data: user, error: userError } = await (supabaseAdmin as any)
       .from('users')
       .select('id, email, name, role')
       .eq('email', email)
       .single()
 
-    if (userError || !user) {
+    // 사용자가 없으면 자동으로 생성 (이메일에서 오는 완료 요청의 경우)
+    if (userError && userError.code === 'PGRST116') {
+      console.log(`사용자 ${email}가 존재하지 않아 자동 생성합니다.`)
+      
+      const { data: newUser, error: createError } = await (supabaseAdmin as any)
+        .from('users')
+        .insert([{
+          email: email,
+          name: email.split('@')[0], // 이메일 앞부분을 이름으로 사용
+          role: 'user'
+        }])
+        .select()
+        .single()
+
+      if (createError) {
+        console.error('사용자 자동 생성 실패:', createError)
+        return res.status(500).json(
+          createApiResponse(false, null, '사용자 생성에 실패했습니다.')
+        )
+      }
+      
+      user = newUser
+    } else if (userError || !user) {
       return res.status(404).json(
         createApiResponse(false, null, '사용자를 찾을 수 없습니다.')
       )
