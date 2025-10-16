@@ -39,6 +39,22 @@ export default function Login() {
         body: JSON.stringify(body)
       })
 
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('HTTP Error:', response.status, errorText)
+        
+        if (response.status >= 500) {
+          setError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+        } else if (response.status === 409) {
+          setError('이미 등록된 이메일입니다.')
+        } else if (response.status === 401) {
+          setError('이메일 또는 비밀번호가 올바르지 않습니다.')
+        } else {
+          setError(`요청 처리 중 오류가 발생했습니다. (${response.status})`)
+        }
+        return
+      }
+
       const result: ApiResponse = await response.json()
 
       if (result.success) {
@@ -49,11 +65,11 @@ export default function Login() {
         // 대시보드로 리다이렉트
         router.push('/dashboard')
       } else {
-        setError(result.error || '로그인에 실패했습니다.')
+        setError(result.error || (isLogin ? '로그인에 실패했습니다.' : '회원가입에 실패했습니다.'))
       }
     } catch (error) {
       console.error('Auth error:', error)
-      setError('서버 오류가 발생했습니다.')
+      setError('네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.')
     } finally {
       setLoading(false)
     }

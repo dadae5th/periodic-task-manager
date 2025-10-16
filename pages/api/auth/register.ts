@@ -46,7 +46,7 @@ export default async function handler(
       )
     }
 
-    // 새 사용자 생성
+    // 새 사용자 생성 (password 필드 제외 - 데이터베이스 스키마에 없음)
     const createResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users`, {
       method: 'POST',
       headers: {
@@ -58,7 +58,6 @@ export default async function handler(
       body: JSON.stringify({
         email,
         name,
-        password, // 실제 운영에서는 해시해야 함
         role: 'user'
       })
     })
@@ -66,10 +65,30 @@ export default async function handler(
     if (!createResponse.ok) {
       const errorText = await createResponse.text()
       console.error('사용자 생성 실패:', errorText)
-      throw new Error(`사용자 생성 실패: ${createResponse.status}`)
+      console.error('Response status:', createResponse.status)
+      console.error('Response headers:', Object.fromEntries(createResponse.headers.entries()))
+      
+      // 더 자세한 오류 정보 제공
+      let errorMessage = '사용자 생성에 실패했습니다.'
+      if (createResponse.status === 409) {
+        errorMessage = '이미 등록된 이메일입니다.'
+      } else if (createResponse.status === 400) {
+        errorMessage = '잘못된 요청입니다. 입력 정보를 확인해주세요.'
+      } else if (createResponse.status === 401 || createResponse.status === 403) {
+        errorMessage = '데이터베이스 접근 권한이 없습니다.'
+      }
+      
+      return res.status(createResponse.status).json(
+        createApiResponse(false, null, errorMessage)
+      )
     }
 
     const newUsers = await createResponse.json()
+    
+    if (!newUsers || newUsers.length === 0) {
+      throw new Error('사용자 생성 응답이 비어있습니다.')
+    }
+    
     const newUser = newUsers[0]
 
     // 알림 설정 생성
@@ -98,12 +117,13 @@ export default async function handler(
     const token = Buffer.from(JSON.stringify({
       userId: newUser.id,
       email: newUser.email,
+      name: newUser.name,
       role: newUser.role,
       exp: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7일
     })).toString('base64')
 
-    // 비밀번호 제외하고 사용자 정보 반환
-    const { password: _, ...userInfo } = newUser
+    // 사용자 정보 반환 (password 필드는 없음)
+    const userInfo = newUser
 
     return res.status(201).json(
       createApiResponse(true, {
