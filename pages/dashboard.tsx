@@ -412,10 +412,14 @@ export default function Dashboard() {
                       </span>
                     )}
                     <button
-                      onClick={logout}
-                      className="text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded px-3 py-1 hover:bg-gray-50"
+                      onClick={() => {
+                        if (confirm('로그아웃 하시겠습니까?')) {
+                          logout()
+                        }
+                      }}
+                      className="text-sm text-white bg-red-500 hover:bg-red-600 border border-red-500 rounded px-4 py-2 font-medium transition-colors"
                     >
-                      로그아웃
+                      🚪 로그아웃
                     </button>
                   </div>
                 )}

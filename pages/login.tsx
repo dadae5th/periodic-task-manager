@@ -13,12 +13,8 @@ export default function Login() {
   const router = useRouter()
 
   useEffect(() => {
-    // 이미 로그인된 사용자 체크
-    const currentUser = localStorage.getItem('currentUser')
-    if (currentUser) {
-      router.push('/dashboard')
-      return
-    }
+    // 로그인 페이지에서는 항상 로그인 화면을 보여줌 (다중 사용자 환경)
+    // 기존 세션이 있어도 명시적으로 로그인하도록 함
 
     // URL 파라미터에서 메시지 처리
     const { message, error: urlError } = router.query

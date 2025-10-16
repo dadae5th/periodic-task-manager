@@ -121,12 +121,23 @@ export function getCurrentUser(): User | null {
   }
 }
 
-// 로그아웃 함수
+// 로그아웃 함수 (완전한 세션 정리)
 export function logout() {
   if (typeof window !== 'undefined') {
+    // 로컬 스토리지 완전 정리
     localStorage.removeItem('currentUser')
     localStorage.removeItem('authToken')
-    window.location.href = '/login'
+    
+    // 세션 스토리지도 정리 (있다면)
+    sessionStorage.clear()
+    
+    // 쿠키 정리 (auth 관련)
+    document.cookie.split(";").forEach(function(c) { 
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+    });
+    
+    // 페이지 리로드로 완전한 초기화
+    window.location.replace('/login')
   }
 }
 
