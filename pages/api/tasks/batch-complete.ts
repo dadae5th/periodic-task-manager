@@ -35,8 +35,13 @@ async function handler(
       completed_by = Array.isArray(completedByParam) ? completedByParam[0] : (completedByParam || '')
       notify_email = completed_by
       
-      // GET 요청인 경우 HTML 응답으로 리디렉션
-      const isHtmlRequest = req.headers.accept?.includes('text/html')
+      // GET 요청인 경우 HTML 응답으로 리디렉션 (이메일에서 오는 요청은 대부분 HTML 요청)
+      const isHtmlRequest = req.headers.accept?.includes('text/html') || 
+                           req.headers.accept?.includes('*/*') ||
+                           !req.headers.accept // Accept 헤더가 없는 경우도 HTML로 처리
+      
+      console.log(`[BATCH_COMPLETE] GET 요청 Accept 헤더:`, req.headers.accept)
+      console.log(`[BATCH_COMPLETE] HTML 요청 여부:`, isHtmlRequest)
       
       if (isHtmlRequest) {
         try {
@@ -110,6 +115,8 @@ async function handler(
       notify_email = body.notify_email || completed_by
 
       // POST 요청인 경우도 HTML 응답으로 리디렉션 (이메일에서 폼 제출)
+      console.log(`[BATCH_COMPLETE] POST 처리 - task_ids 개수: ${task_ids.length}, completed_by: ${completed_by}`)
+      
       if (task_ids.length > 0) {
         try {
           const result = await processBatchCompletion(task_ids, completed_by, notify_email)
