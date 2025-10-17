@@ -35,13 +35,12 @@ async function handler(
       completed_by = Array.isArray(completedByParam) ? completedByParam[0] : (completedByParam || '')
       notify_email = completed_by
       
-      // GET 요청인 경우 HTML 응답으로 리디렉션 (이메일에서 오는 요청은 대부분 HTML 요청)
-      const isHtmlRequest = req.headers.accept?.includes('text/html') || 
-                           req.headers.accept?.includes('*/*') ||
-                           !req.headers.accept // Accept 헤더가 없는 경우도 HTML로 처리
+      // GET 요청인 경우 항상 HTML 응답으로 리디렉션 (이메일에서 오는 요청)
+      // 이메일 클라이언트나 브라우저에서 오는 GET 요청은 모두 리디렉션 처리
+      const isHtmlRequest = true // GET 요청은 항상 HTML로 처리
       
       console.log(`[BATCH_COMPLETE] GET 요청 Accept 헤더:`, req.headers.accept)
-      console.log(`[BATCH_COMPLETE] HTML 요청 여부:`, isHtmlRequest)
+      console.log(`[BATCH_COMPLETE] HTML 요청으로 강제 처리:`, isHtmlRequest)
       
       if (isHtmlRequest) {
         try {
@@ -52,7 +51,7 @@ async function handler(
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
           
           try {
-            console.log('batch-complete GET: 자동 로그인 토큰 생성 시도:', { email: completed_by })
+            console.log('batch-complete GET: 자동 로그인 토큰 생성 시도:', { email: completed_by, appUrl })
             
             const tokenResponse = await fetch(`${appUrl}/api/auth/email-token`, {
               method: 'POST',
@@ -66,20 +65,28 @@ async function handler(
               })
             })
 
+            console.log('batch-complete GET: 토큰 API 응답 상태:', tokenResponse.status)
+            
             if (tokenResponse.ok) {
               const tokenData = await tokenResponse.json()
               const token = tokenData.data?.token
+              
+              console.log('batch-complete GET: 토큰 수신 성공:', { hasToken: !!token, tokenLength: token?.length })
 
               if (token) {
                 // 토큰과 함께 자동 로그인 페이지로 리디렉션
                 const redirectUrl = `${appUrl}/api/auth/email-login?token=${token}&redirect=${encodeURIComponent(`/dashboard?completed=${result.completed_count}&message=${encodeURIComponent(result.completed_count + '개 업무가 완료되었습니다!')}`)}`
-                console.log('batch-complete GET: 자동 로그인 리디렉션:', redirectUrl)
+                console.log('batch-complete GET: 자동 로그인 리디렉션 실행:', redirectUrl)
                 res.redirect(302, redirectUrl)
                 return
+              } else {
+                console.error('batch-complete GET: 토큰이 응답에 없음:', tokenData)
               }
+            } else {
+              console.error('batch-complete GET: 토큰 API 요청 실패:', tokenResponse.status, await tokenResponse.text())
             }
           } catch (tokenError) {
-            console.error('batch-complete GET: 토큰 생성 실패:', tokenError)
+            console.error('batch-complete GET: 토큰 생성 중 예외 발생:', tokenError)
           }
           
           // 토큰 생성 실패시 일반 리디렉션
@@ -125,7 +132,7 @@ async function handler(
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
           
           try {
-            console.log('batch-complete POST: 자동 로그인 토큰 생성 시도:', { email: completed_by })
+            console.log('batch-complete POST: 자동 로그인 토큰 생성 시도:', { email: completed_by, appUrl })
             
             const tokenResponse = await fetch(`${appUrl}/api/auth/email-token`, {
               method: 'POST',
@@ -139,20 +146,28 @@ async function handler(
               })
             })
 
+            console.log('batch-complete POST: 토큰 API 응답 상태:', tokenResponse.status)
+
             if (tokenResponse.ok) {
               const tokenData = await tokenResponse.json()
               const token = tokenData.data?.token
+              
+              console.log('batch-complete POST: 토큰 수신 성공:', { hasToken: !!token, tokenLength: token?.length })
 
               if (token) {
                 // 토큰과 함께 자동 로그인 페이지로 리디렉션
                 const redirectUrl = `${appUrl}/api/auth/email-login?token=${token}&redirect=${encodeURIComponent(`/dashboard?completed=${result.completed_count}&message=${encodeURIComponent(result.completed_count + '개 업무가 완료되었습니다!')}`)}`
-                console.log('batch-complete POST: 자동 로그인 리디렉션:', redirectUrl)
+                console.log('batch-complete POST: 자동 로그인 리디렉션 실행:', redirectUrl)
                 res.redirect(302, redirectUrl)
                 return
+              } else {
+                console.error('batch-complete POST: 토큰이 응답에 없음:', tokenData)
               }
+            } else {
+              console.error('batch-complete POST: 토큰 API 요청 실패:', tokenResponse.status, await tokenResponse.text())
             }
           } catch (tokenError) {
-            console.error('batch-complete POST: 토큰 생성 실패:', tokenError)
+            console.error('batch-complete POST: 토큰 생성 중 예외 발생:', tokenError)
           }
           
           // 토큰 생성 실패시 일반 리디렉션
