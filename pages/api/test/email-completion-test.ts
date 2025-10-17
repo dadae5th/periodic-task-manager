@@ -85,7 +85,20 @@ ${batchCompleteUrl}
     </div>
     
     <div class="test-section">
-        <h3>🛠️ 4. 기타 테스트 도구</h3>
+        <h3>� 4. 디버그 모드 테스트</h3>
+        <p>상세한 로그와 함께 완료 과정을 추적합니다.</p>
+        <a href="${appUrl}/api/test/batch-complete-debug?tasks=${testTaskIds.join(',')}&completed_by=${testEmail}" class="btn" style="background: #dc3545;">🐛 디버그 GET 테스트</a>
+        
+        <form method="post" action="${appUrl}/api/test/batch-complete-debug" style="margin: 10px 0; display: inline-block;">
+            <input type="hidden" name="completed_by" value="${testEmail}" />
+            <input type="hidden" name="task_ids" value="debug-task-1" />
+            <input type="hidden" name="task_ids" value="debug-task-2" />
+            <button type="submit" class="btn" style="background: #dc3545;">🐛 디버그 POST 테스트</button>
+        </form>
+    </div>
+    
+    <div class="test-section">
+        <h3>�🛠️ 5. 기타 테스트 도구</h3>
         <a href="${appUrl}/api/test/cleanup-tokens" class="btn" target="_blank">토큰 정리</a>
         <a href="${appUrl}/api/test/email-tokens-table" class="btn" target="_blank">토큰 상태 확인</a>
         <a href="${appUrl}/api/email/send-daily" class="btn" target="_blank">실제 메일 발송</a>
