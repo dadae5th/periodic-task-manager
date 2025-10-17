@@ -7,7 +7,7 @@ import { withAuth, AuthenticatedRequest } from '@/lib/auth'
 async function handler(
   req: AuthenticatedRequest,
   res: NextApiResponse
-) {
+): Promise<void> {
   if (req.method !== 'POST' && req.method !== 'GET') {
     res.setHeader('Allow', ['GET', 'POST'])
     return res.status(405).json(createApiResponse(false, null, '허용되지 않는 메서드'))
@@ -43,14 +43,48 @@ async function handler(
           // 완료 처리 수행
           const result = await processBatchCompletion(task_ids, completed_by, notify_email)
           
-          // 성공 페이지로 리디렉션
-          const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?completed=${result.completed_count}`
+          // 이메일에서 온 요청인 경우 자동 로그인 토큰 생성
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+          
+          try {
+            console.log('batch-complete GET: 자동 로그인 토큰 생성 시도:', { email: completed_by })
+            
+            const tokenResponse = await fetch(`${appUrl}/api/auth/email-token`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                email: completed_by,
+                purpose: 'batch_completion',
+                task_count: result.completed_count
+              })
+            })
+
+            if (tokenResponse.ok) {
+              const tokenData = await tokenResponse.json()
+              const token = tokenData.data?.token
+
+              if (token) {
+                // 토큰과 함께 자동 로그인 페이지로 리디렉션
+                const redirectUrl = `${appUrl}/api/auth/email-login?token=${token}&redirect=${encodeURIComponent(`/dashboard?completed=${result.completed_count}&message=${encodeURIComponent(result.completed_count + '개 업무가 완료되었습니다!')}`)}`
+                console.log('batch-complete GET: 자동 로그인 리디렉션:', redirectUrl)
+                res.redirect(302, redirectUrl)
+                return
+              }
+            }
+          } catch (tokenError) {
+            console.error('batch-complete GET: 토큰 생성 실패:', tokenError)
+          }
+          
+          // 토큰 생성 실패시 일반 리디렉션
+          const redirectUrl = `${appUrl}/login?message=${encodeURIComponent(result.completed_count + '개 업무가 완료되었습니다. 대시보드를 보시려면 로그인해주세요.')}`
           res.redirect(302, redirectUrl)
           return
         } catch (error) {
           console.error('GET 요청 처리 중 오류:', error)
           const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
-          const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?error=${encodeURIComponent(errorMessage)}`
+          const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login?error=${encodeURIComponent(errorMessage)}`
           res.redirect(302, redirectUrl)
           return
         }
@@ -75,18 +109,53 @@ async function handler(
       completed_by = body.completed_by
       notify_email = body.notify_email || completed_by
 
-      // POST 요청인 경우도 HTML 응답으로 리디렉션
+      // POST 요청인 경우도 HTML 응답으로 리디렉션 (이메일에서 폼 제출)
       if (task_ids.length > 0) {
         try {
           const result = await processBatchCompletion(task_ids, completed_by, notify_email)
           
-          const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?completed=${result.completed_count}`
+          // 이메일에서 온 POST 요청인 경우 자동 로그인 토큰 생성
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+          
+          try {
+            console.log('batch-complete POST: 자동 로그인 토큰 생성 시도:', { email: completed_by })
+            
+            const tokenResponse = await fetch(`${appUrl}/api/auth/email-token`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                email: completed_by,
+                purpose: 'batch_completion',
+                task_count: result.completed_count
+              })
+            })
+
+            if (tokenResponse.ok) {
+              const tokenData = await tokenResponse.json()
+              const token = tokenData.data?.token
+
+              if (token) {
+                // 토큰과 함께 자동 로그인 페이지로 리디렉션
+                const redirectUrl = `${appUrl}/api/auth/email-login?token=${token}&redirect=${encodeURIComponent(`/dashboard?completed=${result.completed_count}&message=${encodeURIComponent(result.completed_count + '개 업무가 완료되었습니다!')}`)}`
+                console.log('batch-complete POST: 자동 로그인 리디렉션:', redirectUrl)
+                res.redirect(302, redirectUrl)
+                return
+              }
+            }
+          } catch (tokenError) {
+            console.error('batch-complete POST: 토큰 생성 실패:', tokenError)
+          }
+          
+          // 토큰 생성 실패시 일반 리디렉션
+          const redirectUrl = `${appUrl}/login?message=${encodeURIComponent(result.completed_count + '개 업무가 완료되었습니다. 대시보드를 보시려면 로그인해주세요.')}`
           res.redirect(302, redirectUrl)
           return
         } catch (error) {
           console.error('POST 요청 처리 중 오류:', error)
           const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
-          const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?error=${encodeURIComponent(errorMessage)}`
+          const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login?error=${encodeURIComponent(errorMessage)}`
           res.redirect(302, redirectUrl)
           return
         }
