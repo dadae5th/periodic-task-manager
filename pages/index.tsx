@@ -1,12 +1,19 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, isEmailSession, clearEmailSession } from '@/lib/auth'
 
 export default function Home() {
   const router = useRouter()
 
   // 메인 페이지에서는 항상 로그인 화면을 보여줌 (다중 사용자 환경)
+  useEffect(() => {
+    // 메일 세션이 있으면 정리 (메인 페이지 접속시 자동 로그인 방지)
+    if (isEmailSession()) {
+      console.log('메인 페이지 접속 - 메일 세션 정리')
+      clearEmailSession()
+    }
+  }, [])
 
   return (
     <div>

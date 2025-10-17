@@ -59,10 +59,10 @@ export default async function handler(
       )
     }
 
-    // 일회용 토큰 생성 (5분 유효 - 보안상 짧게 설정)
+    // 일회용 토큰 생성 (10분 유효 - 이메일 확인에 충분한 시간)
     const token = crypto.randomBytes(32).toString('hex')
     const expiresAt = new Date()
-    expiresAt.setMinutes(expiresAt.getMinutes() + 5)
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10)
 
     // 토큰을 데이터베이스에 저장
     console.log('토큰 DB 저장 시도:', { token: token.substring(0, 8) + '...', email, purpose })

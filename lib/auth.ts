@@ -99,48 +99,57 @@ export function getCurrentUser(): User | null {
   if (typeof window === 'undefined') return null
   
   try {
-    // 1. 먼저 localStorage에서 확인
+    // 1. 먼저 localStorage에서 확인 (일반 로그인)
     let userStr = localStorage.getItem('currentUser')
     let token = localStorage.getItem('authToken')
     
-    // 2. localStorage에 없으면 쿠키에서 확인 (이메일 자동 로그인용)
-    if (!userStr || !token) {
-      const cookieToken = getCookie('auth-token')
-      const cookieEmail = getCookie('user-email')
-      const cookieName = getCookie('user-name')
-      const cookieRole = getCookie('user-role')
+    if (userStr && token) {
+      const user = JSON.parse(userStr)
+      const tokenData = verifyToken(token)
       
-      if (cookieToken && cookieEmail) {
-        // 쿠키에서 사용자 정보 복원
-        const user: User = {
-          id: 'email-user', // 임시 ID
-          email: cookieEmail,
-          name: cookieName ? decodeURIComponent(cookieName) : cookieEmail.split('@')[0],
-          role: (cookieRole === 'admin' ? 'admin' : 'user') as 'user' | 'admin',
-          created_at: new Date().toISOString()
-        }
-        
-        // localStorage에도 저장 (일관성 유지)
-        localStorage.setItem('currentUser', JSON.stringify(user))
-        localStorage.setItem('authToken', cookieToken)
-        
+      if (tokenData) {
         return user
+      } else {
+        // 토큰이 만료된 경우 스토리지 정리
+        localStorage.removeItem('currentUser')
+        localStorage.removeItem('authToken')
+      }
+    }
+    
+    // 2. localStorage에 없으면 쿠키에서 확인 (이메일 자동 로그인용)
+    const cookieToken = getCookie('auth-token')
+    const cookieEmail = getCookie('user-email')
+    const cookieName = getCookie('user-name')
+    const cookieRole = getCookie('user-role')
+    
+    if (cookieToken && cookieEmail) {
+      // 쿠키 토큰 유효성 검사
+      const tokenData = verifyToken(cookieToken)
+      if (!tokenData) {
+        // 쿠키 토큰이 만료된 경우 쿠키 정리
+        const authCookies = ['auth-token', 'user-email', 'user-name', 'user-role']
+        authCookies.forEach(cookieName => {
+          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`
+        })
+        return null
       }
       
-      return null
+      // 쿠키에서 사용자 정보 복원
+      const user: User = {
+        id: 'email-user', // 임시 ID
+        email: cookieEmail,
+        name: cookieName ? decodeURIComponent(cookieName) : cookieEmail.split('@')[0],
+        role: (cookieRole === 'admin' ? 'admin' : 'user') as 'user' | 'admin',
+        created_at: new Date().toISOString()
+      }
+      
+      // 메일 세션임을 표시
+      sessionStorage.setItem('emailSession', 'true')
+      
+      return user
     }
     
-    const user = JSON.parse(userStr)
-    const tokenData = verifyToken(token)
-    
-    if (!tokenData) {
-      // 토큰이 만료된 경우 스토리지 정리
-      localStorage.removeItem('currentUser')
-      localStorage.removeItem('authToken')
-      return null
-    }
-    
-    return user
+    return null
   } catch (error) {
     console.error('사용자 정보 로드 실패:', error)
     return null
@@ -160,33 +169,69 @@ function getCookie(name: string): string | null {
   return null
 }
 
-// 로그아웃 함수 (완전한 세션 정리)
-export function logout() {
+// 메일 세션 여부 확인 함수
+export function isEmailSession(): boolean {
+  if (typeof window === 'undefined') return false
+  
+  // 1. sessionStorage에서 확인
+  const emailSessionFlag = sessionStorage.getItem('emailSession')
+  if (emailSessionFlag === 'true') return true
+  
+  // 2. localStorage에 일반 로그인 정보가 없으면서 쿠키에 auth-token이 있으면 메일 세션
+  const hasLocalStorage = localStorage.getItem('currentUser') && localStorage.getItem('authToken')
+  const hasCookie = getCookie('auth-token')
+  
+  return !hasLocalStorage && !!hasCookie
+}
+
+// 로그아웃 함수 (세션 유형에 따라 다르게 처리)
+export function logout(force: boolean = false) {
   if (typeof window !== 'undefined') {
-    console.log('로그아웃 시작...')
+    const emailSession = isEmailSession()
+    console.log('로그아웃 시작...', { emailSession, force })
     
-    // 로컬 스토리지 완전 정리
+    // 로컬 스토리지 정리 (일반 로그인)
     localStorage.removeItem('currentUser')
     localStorage.removeItem('authToken')
     
-    // 세션 스토리지도 정리 (있다면)
+    // 세션 스토리지 정리
     sessionStorage.clear()
     
-    // 인증 관련 쿠키들을 명시적으로 삭제
-    const authCookies = ['auth-token', 'user-email', 'user-name', 'user-role']
-    authCookies.forEach(cookieName => {
-      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`
-    })
-    
-    // 전체 쿠키 정리 (백업용)
-    document.cookie.split(";").forEach(function(c) { 
-      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-    });
+    // 쿠키 정리 (메일 세션)
+    if (emailSession || force) {
+      const authCookies = ['auth-token', 'user-email', 'user-name', 'user-role']
+      authCookies.forEach(cookieName => {
+        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`
+      })
+      
+      // 전체 쿠키 정리 (백업용)
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
+    }
     
     console.log('로그아웃 완료: 모든 인증 정보 정리됨')
     
     // 페이지 리로드로 완전한 초기화
     window.location.replace('/login')
+  }
+}
+
+// 메일 세션만 정리하는 함수 (자동 로그아웃용)
+export function clearEmailSession() {
+  if (typeof window !== 'undefined' && isEmailSession()) {
+    console.log('메일 세션 자동 정리...')
+    
+    // 쿠키만 정리 (localStorage는 유지)
+    const authCookies = ['auth-token', 'user-email', 'user-name', 'user-role']
+    authCookies.forEach(cookieName => {
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`
+    })
+    
+    // 세션 스토리지에서 메일 세션 플래그 제거
+    sessionStorage.removeItem('emailSession')
+    
+    console.log('메일 세션 정리 완료')
   }
 }
 
