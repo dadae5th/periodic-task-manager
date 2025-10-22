@@ -59,12 +59,12 @@ export function generateEmailFriendlyTemplate(tasks: Task[], overdueTasks: Task[
             <div class="task-section">
                 <h2>🚨 지연된 업무</h2>
                 
-                <!-- 일괄 완료 섹션 -->
+                <!-- 대시보드 링크 섹션 -->
                 <div class="batch-section">
-                    <h3>⚡ 빠른 일괄 완료</h3>
-                    <p>지연된 모든 업무를 한번에 완료 처리합니다.</p>
-                    <a href="${appUrl}/api/tasks/batch-complete?tasks=${overdueTasks.map(t => t.id).join(',')}&completed_by=${encodeURIComponent(overdueTasks[0]?.assignee || '')}" 
-                       class="btn btn-batch">🔥 모든 지연 업무 완료</a>
+                    <h3>⚡ 지연 업무 처리</h3>
+                    <p>지연된 업무들을 처리하려면 대시보드에서 확인하고 완료하세요.</p>
+                    <a href="${appUrl}/dashboard?filter=overdue" 
+                       class="btn btn-batch">🔥 지연 업무 확인하기</a>
                 </div>
                 
                 <!-- 개별 완료 섹션 -->
@@ -93,12 +93,12 @@ export function generateEmailFriendlyTemplate(tasks: Task[], overdueTasks: Task[
             <div class="task-section">
                 <h2>📅 오늘 해야할 일</h2>
                 
-                <!-- 일괄 완료 섹션 -->
+                <!-- 대시보드 링크 섹션 -->
                 <div class="batch-section">
-                    <h3>⚡ 빠른 일괄 완료</h3>
-                    <p>오늘 해야할 모든 업무를 한번에 완료 처리합니다.</p>
-                    <a href="${appUrl}/api/tasks/batch-complete?tasks=${tasks.map(t => t.id).join(',')}&completed_by=${encodeURIComponent(tasks[0]?.assignee || '')}" 
-                       class="btn btn-batch">✅ 모든 오늘 업무 완료</a>
+                    <h3>⚡ 오늘 업무 처리</h3>
+                    <p>오늘 해야할 업무들을 처리하려면 대시보드에서 확인하고 완료하세요.</p>
+                    <a href="${appUrl}/dashboard?filter=today" 
+                       class="btn btn-batch">✅ 오늘 업무 확인하기</a>
                 </div>
                 
                 <!-- 개별 완료 섹션 -->
