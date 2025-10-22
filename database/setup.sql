@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
+  password TEXT NOT NULL,
   role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -68,8 +69,8 @@ CREATE POLICY "모든 사용자 접근 허용" ON task_completions FOR ALL USING
 CREATE POLICY "모든 사용자 접근 허용" ON email_tokens FOR ALL USING (true);
 
 -- 8. 기본 관리자 사용자 생성 (존재하지 않는 경우에만)
-INSERT INTO users (email, name, role) 
-VALUES ('bae.jae.kwon@drbworld.com', '배재권', 'admin')
+INSERT INTO users (email, name, password, role) 
+VALUES ('bae.jae.kwon@drbworld.com', '배재권', 'test123', 'admin')
 ON CONFLICT (email) DO NOTHING;
 
 -- 9. 샘플 업무 데이터 (개발/테스트용)

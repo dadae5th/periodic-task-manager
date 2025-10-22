@@ -19,8 +19,8 @@ export default async function handler(
       )
     }
 
-    // 직접 REST API로 사용자 조회
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users?email=eq.${email}`, {
+    // 직접 REST API로 사용자 조회 (비밀번호 포함)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users?email=eq.${email}&select=*`, {
       headers: {
         'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY!,
         'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
@@ -42,13 +42,12 @@ export default async function handler(
 
     const user = users[0]
 
-    // 엄격한 비밀번호 검증 - 특정 비밀번호만 허용
-    const validPasswords = ['test123', 'admin123', 'demo123']
-    const isValidPassword = validPasswords.includes(password)
+    // 실제 비밀번호 검증
+    const isValidPassword = user.password === password
 
     if (!isValidPassword) {
       return res.status(401).json(
-        createApiResponse(false, null, '비밀번호가 일치하지 않습니다. (힌트: test123, admin123, demo123 중 하나)')
+        createApiResponse(false, null, '비밀번호가 일치하지 않습니다.')
       )
     }
 
@@ -60,8 +59,15 @@ export default async function handler(
       exp: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7일
     })).toString('base64')
 
-    // 사용자 정보 반환
-    const userInfo = user
+    // 사용자 정보 반환 (비밀번호 제외)
+    const userInfo = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      created_at: user.created_at,
+      updated_at: user.updated_at
+    }
 
     return res.status(200).json(
       createApiResponse(true, {

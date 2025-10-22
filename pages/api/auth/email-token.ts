@@ -40,6 +40,7 @@ export default async function handler(
         .insert([{
           email: email,
           name: email.split('@')[0], // 이메일 앞부분을 이름으로 사용
+          password: 'temp123', // 임시 비밀번호 설정
           role: 'user'
         }])
         .select()

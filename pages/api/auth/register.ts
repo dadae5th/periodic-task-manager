@@ -46,7 +46,7 @@ export default async function handler(
       )
     }
 
-    // 새 사용자 생성 (password 필드 제외 - 데이터베이스 스키마에 없음)
+    // 새 사용자 생성 (비밀번호 포함)
     const createResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users`, {
       method: 'POST',
       headers: {
@@ -58,6 +58,7 @@ export default async function handler(
       body: JSON.stringify({
         email,
         name,
+        password, // 비밀번호 추가
         role: 'user'
       })
     })

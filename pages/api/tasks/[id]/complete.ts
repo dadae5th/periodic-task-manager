@@ -131,6 +131,7 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
           .insert([{
             email: completedBy,
             name: completedBy.split('@')[0],
+            password: 'temp123', // 임시 비밀번호 설정
             role: 'user'
           }])
           .select()
