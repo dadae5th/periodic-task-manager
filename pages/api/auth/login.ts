@@ -42,13 +42,13 @@ export default async function handler(
 
     const user = users[0]
 
-    // 임시 비밀번호 검증 (실제 운영에서는 해시된 비밀번호 사용)
-    // 모든 사용자에 대해 간단한 비밀번호 검증
-    const isValidPassword = password === 'test123' || password.length >= 6
+    // 엄격한 비밀번호 검증 - 특정 비밀번호만 허용
+    const validPasswords = ['test123', 'admin123', 'demo123']
+    const isValidPassword = validPasswords.includes(password)
 
     if (!isValidPassword) {
       return res.status(401).json(
-        createApiResponse(false, null, '비밀번호가 일치하지 않습니다.')
+        createApiResponse(false, null, '비밀번호가 일치하지 않습니다. (힌트: test123, admin123, demo123 중 하나)')
       )
     }
 

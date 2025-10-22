@@ -112,47 +112,62 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
       return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('업무 업데이트에 실패했습니다.')}`)
     }
 
-    // 업무 완료 후 자동 로그인 토큰 생성
+    // 간소화된 자동 로그인 처리
     try {
-      console.log('토큰 생성 시도:', { email: completedBy, task_id: id })
+      console.log('자동 로그인 처리 시작:', { email: completedBy, task_id: id })
       
-      const tokenResponse = await fetch(`${appUrl}/api/auth/email-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: completedBy,
-          purpose: 'task_completion',
-          task_id: id
-        })
-      })
+      // 사용자 정보 조회
+      let { data: user, error: userError } = await (supabaseAdmin as any)
+        .from('users')
+        .select('id, email, name, role')
+        .eq('email', completedBy)
+        .single()
 
-      console.log('토큰 응답 상태:', tokenResponse.status)
+      // 사용자가 없으면 자동 생성
+      if (userError && userError.code === 'PGRST116') {
+        console.log(`사용자 ${completedBy} 자동 생성`)
+        const { data: newUser, error: createError } = await (supabaseAdmin as any)
+          .from('users')
+          .insert([{
+            email: completedBy,
+            name: completedBy.split('@')[0],
+            role: 'user'
+          }])
+          .select()
+          .single()
 
-      if (tokenResponse.ok) {
-        const tokenData = await tokenResponse.json()
-        console.log('토큰 데이터:', tokenData)
-        const token = tokenData.data?.token
-
-        if (token) {
-          // 토큰과 함께 자동 로그인 페이지로 리디렉션
-          const redirectUrl = `${appUrl}/api/auth/email-login?token=${token}&redirect=${encodeURIComponent(`/dashboard?completed_task=${id}&message=${encodeURIComponent('업무가 완료되었습니다!')}`)}`
-          console.log('자동 로그인 리디렉션:', redirectUrl)
-          return res.redirect(302, redirectUrl)
-        } else {
-          console.error('토큰이 응답에 없음:', tokenData)
+        if (createError) {
+          console.error('사용자 생성 실패:', createError)
+          return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('사용자 생성 실패')}`)
         }
-      } else {
-        const errorText = await tokenResponse.text()
-        console.error('토큰 생성 HTTP 오류:', tokenResponse.status, errorText)
+        user = newUser
+      } else if (userError || !user) {
+        console.error('사용자 조회 실패:', userError)
+        return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('사용자 조회 실패')}`)
       }
-    } catch (tokenError) {
-      console.error('자동 로그인 토큰 생성 실패:', tokenError)
-    }
 
-    // 토큰 생성 실패 시 성공 메시지와 함께 로그인 페이지로
-    return res.redirect(302, `${appUrl}/login?message=${encodeURIComponent('업무가 완료되었습니다. 대시보드를 보시려면 로그인해주세요.')}&completed_task=${id}`)
+      // 간단한 인증 토큰 생성 (simplified)
+      const { generateToken } = require('@/lib/auth')
+      const sessionToken = generateToken(user)
+
+      // 인증 쿠키 직접 설정
+      res.setHeader('Set-Cookie', [
+        `auth-token=${sessionToken}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`,
+        `user-email=${user.email}; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`,
+        `user-name=${encodeURIComponent(user.name)}; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`,
+        `user-role=${user.role}; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`
+      ])
+
+      // 성공 메시지와 함께 대시보드로 리디렉션
+      const redirectUrl = `${appUrl}/dashboard?completed_task=${id}&message=${encodeURIComponent('업무가 완료되었습니다!')}&auto_login=true`
+      console.log('자동 로그인 성공, 리디렉션:', redirectUrl)
+      return res.redirect(302, redirectUrl)
+
+    } catch (autoLoginError) {
+      console.error('자동 로그인 처리 오류:', autoLoginError)
+      // 자동 로그인 실패시 수동 로그인 페이지로
+      return res.redirect(302, `${appUrl}/login?message=${encodeURIComponent('업무가 완료되었습니다. 로그인해주세요.')}&redirect=${encodeURIComponent(`/dashboard?completed_task=${id}`)}`)
+    }
   } catch (error) {
     console.error('업무 완료 처리 중 오류:', error)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
