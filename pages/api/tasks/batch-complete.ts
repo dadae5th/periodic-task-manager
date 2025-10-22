@@ -396,31 +396,9 @@ async function processBatchCompletion(task_ids: string[], completed_by: string, 
   }
 
   // 3. 완료 알림 이메일 발송 (완전 비활성화)
-  // 일괄완료 알림 메일이 불필요하게 발송되는 문제로 인해 완전 비활성화
-  // 필요시 ENABLE_BATCH_COMPLETION_EMAIL 환경변수로 활성화 가능
-  const shouldSendEmail = false // 강제로 비활성화
+  // 일괄완료 알림 이메일 발송 기능 완전 제거
+  console.log(`[BATCH_COMPLETE] 일괄완료 알림 이메일 발송 기능이 제거되었습니다. 완료된 업무: ${completedTasks.length}개`)
   
-  console.log(`[BATCH_COMPLETE] 일괄완료 이메일 발송 설정: ${shouldSendEmail} (강제 비활성화됨)`)
-  
-  if (shouldSendEmail && notify_email && completedTasks.length > 0) {
-    try {
-      const { getEmailService } = await import('@/lib/email')
-      const emailService = getEmailService()
-      
-      await emailService.sendBatchCompletionEmail(
-        notify_email,
-        completedTasks,
-        completed_by
-      )
-      console.log(`일괄완료 알림 이메일 발송: ${notify_email}에게 ${completedTasks.length}개 업무 완료 알림`)
-    } catch (emailError) {
-      console.error('완료 알림 이메일 발송 실패:', emailError)
-      // 이메일 실패는 전체 작업을 실패로 처리하지 않음
-    }
-  } else if (completedTasks.length > 0) {
-    console.log(`일괄완료 알림 이메일 비활성화됨: ${completedTasks.length}개 업무 완료되었지만 알림 미발송`)
-  }
-
   const successCount = completedTasks.length
   const totalCount = task_ids.length
 
