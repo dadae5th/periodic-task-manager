@@ -26,15 +26,31 @@ export default function ChangePassword() {
 
   const checkAuth = async () => {
     try {
+      console.log('인증 확인 시작...')
+      
+      // 쿠키 확인
+      const cookies = document.cookie
+      console.log('현재 쿠키:', cookies)
+      const hasAuthToken = cookies.includes('auth_token')
+      console.log('auth_token 쿠키 존재:', hasAuthToken)
+      
       const response = await fetch('/api/auth/me')
+      console.log('인증 API 응답 상태:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('인증 API 응답 데이터:', data)
+        
         if (data.success) {
+          console.log('인증 성공, 사용자 정보:', data.data)
           setUser(data.data)
         } else {
+          console.log('인증 실패, 로그인 페이지로 이동:', data.message)
           window.location.href = '/login'
         }
       } else {
+        const errorText = await response.text()
+        console.log('HTTP 오류:', response.status, errorText)
         window.location.href = '/login'
       }
     } catch (error) {
