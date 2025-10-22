@@ -30,11 +30,11 @@ export default async function handler(
     const today = new Date().toISOString().split('T')[0]
     
     // 오늘 할 일과 지연된 업무 분류
-    const todayTasks = allTasks.filter(task => 
+    const todayTasks = (allTasks || []).filter((task: any) => 
       task.due_date === today && !task.completed
     )
     
-    const overdueTasks = allTasks.filter(task => 
+    const overdueTasks = (allTasks || []).filter((task: any) => 
       task.due_date < today && !task.completed
     )
 
