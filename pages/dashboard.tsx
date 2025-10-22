@@ -674,9 +674,13 @@ export default function Dashboard() {
 
               <div className="divide-y divide-gray-200">
                 {(() => {
+                  // 안전한 배열 처리
+                  const safeTasks = Array.isArray(tasks) ? tasks : []
+                  const safeCompletedIds = completedTaskIds instanceof Set ? completedTaskIds : new Set()
+                  
                   const filteredTasks = viewMode === 'active' 
-                    ? tasks.filter(task => !task.completed && !completedTaskIds.has(task.id))
-                    : tasks;
+                    ? safeTasks.filter(task => task && !task.completed && !safeCompletedIds.has(task.id))
+                    : safeTasks;
                   
                   if (filteredTasks.length === 0) {
                     return (
@@ -688,16 +692,23 @@ export default function Dashboard() {
                     );
                   }
                   
-                  return filteredTasks.map((task) => {
-                    const isOverdue = new Date(task.due_date) < new Date()
-                    
-                    return (
-                      <div
-                        key={task.id}
-                        className={`px-6 py-4 hover:bg-gray-50 ${
-                          isOverdue ? 'bg-red-50 border-l-4 border-red-500' : ''
-                        }`}
-                      >
+                  return filteredTasks
+                    .map((task) => {
+                      // task 객체 안전성 검사
+                      if (!task || !task.id) {
+                        console.warn('Invalid task object:', task)
+                        return null
+                      }
+                      
+                      const isOverdue = task.due_date ? new Date(task.due_date) < new Date() : false
+                      
+                      return (
+                        <div
+                          key={task.id}
+                          className={`px-6 py-4 hover:bg-gray-50 ${
+                            isOverdue ? 'bg-red-50 border-l-4 border-red-500' : ''
+                          }`}
+                        >
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3">
@@ -763,7 +774,8 @@ export default function Dashboard() {
                         </div>
                       </div>
                     )
-                  });
+                    })
+                    .filter(Boolean); // null 값 제거
                 })()}
               </div>
             </div>
