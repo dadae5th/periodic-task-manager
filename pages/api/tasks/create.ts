@@ -94,9 +94,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         await emailService.sendDailyTaskEmail(
           createdTask.assignee,
           [createdTask], // 오늘 업무
-          [], // 지연 업무
-          [], // 이번주 업무  
-          [] // 이번달 업무
+          [] // 지연 업무
         )
         console.log(`새 업무 알림 이메일 발송됨: ${createdTask.assignee} (오늘 마감)`)
       } else {

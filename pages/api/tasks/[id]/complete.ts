@@ -266,25 +266,8 @@ async function handleComplete(req: AuthenticatedRequest, res: NextApiResponse, i
       )
     }
 
-    // 3. 이메일 알림 발송 (선택사항)
-    if (notify_email) {
-      try {
-        const emailService = getEmailService()
-        const result = await emailService.sendTaskCompletionEmail(
-          notify_email,
-          task,
-          completed_by
-        )
-        
-        if (!result.success) {
-          console.error('완료 알림 이메일 발송 실패:', result.error)
-          // 이메일 실패는 치명적이지 않으므로 계속 진행
-        }
-      } catch (emailError) {
-        console.error('이메일 서비스 오류:', emailError)
-        // 이메일 실패는 치명적이지 않으므로 계속 진행
-      }
-    }
+    // 3. 완료 로그 출력 (이메일 알림 기능은 간소화를 위해 제거됨)
+    console.log(`업무 완료됨: ${task.title} (완료자: ${completed_by})`)
 
     return res.status(200).json(
       createApiResponse(true, {
