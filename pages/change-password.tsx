@@ -11,6 +11,7 @@ interface User {
 export default function ChangePassword() {
   console.log('비밀번호 변경 페이지 로드됨')
   const router = useRouter()
+  console.log('Router 초기화됨:', router?.isReady)
   const [user, setUser] = useState<User | null>(null)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -31,14 +32,14 @@ export default function ChangePassword() {
         if (data.success) {
           setUser(data.data)
         } else {
-          router.push('/login')
+          window.location.href = '/login'
         }
       } else {
-        router.push('/login')
+        window.location.href = '/login'
       }
     } catch (error) {
       console.error('인증 확인 오류:', error)
-      router.push('/login')
+      window.location.href = '/login'
     }
   }
 
@@ -92,7 +93,7 @@ export default function ChangePassword() {
         
         // 3초 후 대시보드로 이동
         setTimeout(() => {
-          router.push('/dashboard')
+          window.location.href = '/dashboard'
         }, 3000)
       } else {
         setError(data.message || '비밀번호 변경에 실패했습니다.')
@@ -225,7 +226,7 @@ export default function ChangePassword() {
               
               <button
                 type="button"
-                onClick={() => router.push('/dashboard')}
+                onClick={() => window.location.href = '/dashboard'}
                 className="flex-1 flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 취소

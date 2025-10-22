@@ -464,9 +464,22 @@ export default function Dashboard() {
                       </span>
                     )}
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault()
                         console.log('비밀번호 변경 버튼 클릭됨')
-                        router.push('/change-password')
+                        console.log('Router 상태:', router.isReady)
+                        
+                        if (router && router.push && typeof router.push === 'function') {
+                          try {
+                            router.push('/change-password')
+                          } catch (error) {
+                            console.error('라우터 push 오류:', error)
+                            window.location.href = '/change-password'
+                          }
+                        } else {
+                          console.log('라우터를 사용할 수 없음. window.location 사용')
+                          window.location.href = '/change-password'
+                        }
                       }}
                       className="text-sm text-white bg-blue-500 hover:bg-blue-600 border border-blue-500 rounded px-4 py-2 font-medium transition-colors"
                     >
