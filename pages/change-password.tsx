@@ -9,6 +9,7 @@ interface User {
 }
 
 export default function ChangePassword() {
+  console.log('비밀번호 변경 페이지 로드됨')
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [currentPassword, setCurrentPassword] = useState('')

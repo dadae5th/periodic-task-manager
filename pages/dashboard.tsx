@@ -464,7 +464,10 @@ export default function Dashboard() {
                       </span>
                     )}
                     <button
-                      onClick={() => router.push('/change-password')}
+                      onClick={() => {
+                        console.log('비밀번호 변경 버튼 클릭됨')
+                        router.push('/change-password')
+                      }}
                       className="text-sm text-white bg-blue-500 hover:bg-blue-600 border border-blue-500 rounded px-4 py-2 font-medium transition-colors"
                     >
                       🔑 비밀번호 변경
