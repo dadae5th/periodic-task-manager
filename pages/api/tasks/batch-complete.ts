@@ -395,10 +395,12 @@ async function processBatchCompletion(task_ids: string[], completed_by: string, 
     }
   }
 
-  // 3. 완료 알림 이메일 발송 (선택적) - 현재 비활성화됨
-  // TODO: 일괄완료 알림 메일이 불필요하게 발송되는 문제로 인해 임시 비활성화
+  // 3. 완료 알림 이메일 발송 (완전 비활성화)
+  // 일괄완료 알림 메일이 불필요하게 발송되는 문제로 인해 완전 비활성화
   // 필요시 ENABLE_BATCH_COMPLETION_EMAIL 환경변수로 활성화 가능
-  const shouldSendEmail = process.env.ENABLE_BATCH_COMPLETION_EMAIL === 'true'
+  const shouldSendEmail = false // 강제로 비활성화
+  
+  console.log(`[BATCH_COMPLETE] 일괄완료 이메일 발송 설정: ${shouldSendEmail} (강제 비활성화됨)`)
   
   if (shouldSendEmail && notify_email && completedTasks.length > 0) {
     try {
