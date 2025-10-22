@@ -71,6 +71,8 @@ class EmailService {
         text: textContent,
       }
 
+      console.log(`[EMAIL] 일일 업무 이메일 발송 - 받는이: ${recipient}, 제목: ${mailOptions.subject}`)
+
       const info = await this.transporter.sendMail(mailOptions)
 
       return {
@@ -123,6 +125,8 @@ class EmailService {
         html: htmlContent,
         text: textContent,
       }
+
+      console.log(`[EMAIL] 개별 완료 이메일 발송 - 받는이: ${recipient}, 제목: ${mailOptions.subject}`)
 
       const info = await this.transporter.sendMail(mailOptions)
 
@@ -298,13 +302,11 @@ ${task.description ? `설명: ${task.description}` : ''}
     completedBy: string
   ): Promise<EmailResult> {
     // 일괄완료 메일 발송을 완전히 비활성화
-    console.log(`[EMAIL] 일괄완료 메일 발송 요청 무시됨 - 받는이: ${recipient}, 완료된 업무: ${completedTasks.length}개`)
+    console.error(`[EMAIL] ❌ 일괄완료 메일 발송 시도 차단됨! 받는이: ${recipient}, 완료된 업무: ${completedTasks.length}개`)
+    console.error(`[EMAIL] ❌ 호출 스택:`, new Error().stack)
     
-    return {
-      success: true,
-      messageId: `disabled-${Date.now()}`,
-      recipient,
-    }
+    // 에러를 던져서 호출하는 곳을 찾을 수 있도록 함
+    throw new Error(`일괄완료 메일 발송이 비활성화되었습니다. 받는이: ${recipient}`)
   }
 
   /**
