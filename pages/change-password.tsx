@@ -224,13 +224,13 @@ export default function ChangePassword() {
                 {loading ? '변경 중...' : '비밀번호 변경'}
               </button>
               
-              <button
-                type="button"
-                onClick={() => window.location.href = '/dashboard'}
+              <a
+                href="/dashboard"
                 className="flex-1 flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                style={{ textDecoration: 'none' }}
               >
                 취소
-              </button>
+              </a>
             </div>
           </form>
         </div>
