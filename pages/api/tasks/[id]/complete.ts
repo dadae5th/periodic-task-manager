@@ -151,16 +151,8 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
       const { generateToken } = require('@/lib/auth')
       const sessionToken = generateToken(user)
 
-      // 인증 쿠키 직접 설정
-      res.setHeader('Set-Cookie', [
-        `auth-token=${sessionToken}; HttpOnly; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`,
-        `user-email=${user.email}; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`,
-        `user-name=${encodeURIComponent(user.name)}; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`,
-        `user-role=${user.role}; Path=/; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`
-      ])
-
-      // 성공 메시지와 함께 대시보드로 리디렉션
-      const redirectUrl = `${appUrl}/dashboard?completed_task=${id}&message=${encodeURIComponent('업무가 완료되었습니다!')}&auto_login=true`
+      // URL에 토큰을 포함하여 대시보드로 리다이렉트 (임시 방식)
+      const redirectUrl = `${appUrl}/task-complete?token=${encodeURIComponent(sessionToken)}&task=${id}&user=${encodeURIComponent(user.email)}&message=${encodeURIComponent('업무가 완료되었습니다!')}`
       console.log('자동 로그인 성공, 리디렉션:', redirectUrl)
       return res.redirect(302, redirectUrl)
 

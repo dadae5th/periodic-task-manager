@@ -45,7 +45,7 @@ class EmailService {
     overdueTasks: Task[]
   ): Promise<EmailResult> {
     try {
-      const htmlContent = this.generateSimpleEmailHTML(tasks, overdueTasks)
+      const htmlContent = this.generateSimpleEmailHTML(tasks, overdueTasks, recipient)
       const textContent = this.generateSimpleEmailText(tasks, overdueTasks)
 
       const mailOptions = {
@@ -77,7 +77,7 @@ class EmailService {
   /**
    * 간단한 이메일 HTML 생성
    */
-  private generateSimpleEmailHTML(tasks: Task[], overdueTasks: Task[]): string {
+  private generateSimpleEmailHTML(tasks: Task[], overdueTasks: Task[], recipient: string): string {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     
     let tasksList = ''
@@ -95,7 +95,7 @@ class EmailService {
             <h4 style="margin: 0 0 10px 0;">${task.title}</h4>
             <p style="color: #666; margin: 5px 0;">담당자: ${task.assignee}</p>
             <p style="color: #dc3545; margin: 5px 0; font-weight: bold;">마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')}</p>
-            <a href="${appUrl}/api/tasks/${task.id}/complete?auto_login=true" 
+            <a href="${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(recipient)}" 
                style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 10px;">
               ✅ 완료
             </a>
@@ -119,7 +119,7 @@ class EmailService {
             <h4 style="margin: 0 0 10px 0;">${task.title}</h4>
             <p style="color: #666; margin: 5px 0;">담당자: ${task.assignee}</p>
             <p style="color: #666; margin: 5px 0;">마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')}</p>
-            <a href="${appUrl}/api/tasks/${task.id}/complete?auto_login=true" 
+            <a href="${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(recipient)}" 
                style="background: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 10px;">
               ✅ 완료
             </a>
