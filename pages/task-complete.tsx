@@ -8,9 +8,12 @@ export default function TaskCompletePage() {
   const [isProcessing, setIsProcessing] = useState(true)
 
   useEffect(() => {
+    console.log('TaskCompletePage 파라미터:', { token, task, user, message })
+    
     if (token && user) {
       // 토큰을 localStorage에 저장하고 대시보드로 리다이렉트
       try {
+        console.log('토큰 저장 시도:', { token: token as string, user: user })
         localStorage.setItem('authToken', token as string)
         localStorage.setItem('currentUser', JSON.stringify({
           email: user,
@@ -41,6 +44,7 @@ export default function TaskCompletePage() {
       }
     } else {
       // 토큰이 없으면 로그인 페이지로
+      console.log('토큰 또는 사용자 정보가 없음:', { token, user })
       setIsProcessing(false)
       router.push('/login')
     }

@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { createApiResponse } from '@/lib/utils'
 import { getEmailService } from '@/lib/email'
 import { TaskScheduler } from '@/lib/scheduler'
-import { withAuth, AuthenticatedRequest } from '@/lib/auth'
+import { withAuth, AuthenticatedRequest, generateToken } from '@/lib/auth'
 
 async function handler(
   req: AuthenticatedRequest,
@@ -34,7 +34,9 @@ async function handler(
  */
 async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse, id: string) {
   try {
-    const { completed_by, notify_email } = req.query
+    const { completed_by, notify_email, auto_login } = req.query
+
+    console.log('이메일 완료 요청:', { id, completed_by, auto_login })
 
     if (!completed_by || typeof completed_by !== 'string') {
       return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/login?error=${encodeURIComponent('완료자 정보가 필요합니다.')}`)
@@ -112,53 +114,57 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
       return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('업무 업데이트에 실패했습니다.')}`)
     }
 
-    // 간소화된 자동 로그인 처리
-    try {
-      console.log('자동 로그인 처리 시작:', { email: completedBy, task_id: id })
-      
-      // 사용자 정보 조회
-      let { data: user, error: userError } = await (supabaseAdmin as any)
-        .from('users')
-        .select('id, email, name, role')
-        .eq('email', completedBy)
-        .single()
-
-      // 사용자가 없으면 자동 생성
-      if (userError && userError.code === 'PGRST116') {
-        console.log(`사용자 ${completedBy} 자동 생성`)
-        const { data: newUser, error: createError } = await (supabaseAdmin as any)
+    // 간소화된 자동 로그인 처리 (auto_login=true인 경우에만)
+    if (auto_login === 'true') {
+      try {
+        console.log('자동 로그인 처리 시작:', { email: completedBy, task_id: id })
+        
+        // 사용자 정보 조회
+        let { data: user, error: userError } = await (supabaseAdmin as any)
           .from('users')
-          .insert([{
-            email: completedBy,
-            name: completedBy.split('@')[0],
-            password: 'temp123', // 임시 비밀번호 설정
-            role: 'user'
-          }])
-          .select()
+          .select('id, email, name, role')
+          .eq('email', completedBy)
           .single()
 
-        if (createError) {
-          console.error('사용자 생성 실패:', createError)
-          return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('사용자 생성 실패')}`)
+        // 사용자가 없으면 자동 생성
+        if (userError && userError.code === 'PGRST116') {
+          console.log(`사용자 ${completedBy} 자동 생성`)
+          const { data: newUser, error: createError } = await (supabaseAdmin as any)
+            .from('users')
+            .insert([{
+              email: completedBy,
+              name: completedBy.split('@')[0],
+              password: 'temp123', // 임시 비밀번호 설정
+              role: 'user'
+            }])
+            .select()
+            .single()
+
+          if (createError) {
+            console.error('사용자 생성 실패:', createError)
+            return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('사용자 생성 실패')}`)
+          }
+          user = newUser
+        } else if (userError || !user) {
+          console.error('사용자 조회 실패:', userError)
+          return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('사용자 조회 실패')}`)
         }
-        user = newUser
-      } else if (userError || !user) {
-        console.error('사용자 조회 실패:', userError)
-        return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('사용자 조회 실패')}`)
+
+        // 간단한 인증 토큰 생성 (simplified)
+        const sessionToken = generateToken(user)
+
+        // URL에 토큰을 포함하여 대시보드로 리다이렉트 (임시 방식)
+        const redirectUrl = `${appUrl}/task-complete?token=${encodeURIComponent(sessionToken)}&task=${id}&user=${encodeURIComponent(user.email)}&message=${encodeURIComponent('업무가 완료되었습니다!')}`
+        console.log('자동 로그인 성공, 리디렉션:', redirectUrl)
+        return res.redirect(302, redirectUrl)
+
+      } catch (autoLoginError) {
+        console.error('자동 로그인 처리 오류:', autoLoginError)
+        // 자동 로그인 실패시 수동 로그인 페이지로
+        return res.redirect(302, `${appUrl}/login?message=${encodeURIComponent('업무가 완료되었습니다. 로그인해주세요.')}&redirect=${encodeURIComponent(`/dashboard?completed_task=${id}`)}`)
       }
-
-      // 간단한 인증 토큰 생성 (simplified)
-      const { generateToken } = require('@/lib/auth')
-      const sessionToken = generateToken(user)
-
-      // URL에 토큰을 포함하여 대시보드로 리다이렉트 (임시 방식)
-      const redirectUrl = `${appUrl}/task-complete?token=${encodeURIComponent(sessionToken)}&task=${id}&user=${encodeURIComponent(user.email)}&message=${encodeURIComponent('업무가 완료되었습니다!')}`
-      console.log('자동 로그인 성공, 리디렉션:', redirectUrl)
-      return res.redirect(302, redirectUrl)
-
-    } catch (autoLoginError) {
-      console.error('자동 로그인 처리 오류:', autoLoginError)
-      // 자동 로그인 실패시 수동 로그인 페이지로
+    } else {
+      // auto_login이 false이거나 없는 경우 수동 로그인 페이지로
       return res.redirect(302, `${appUrl}/login?message=${encodeURIComponent('업무가 완료되었습니다. 로그인해주세요.')}&redirect=${encodeURIComponent(`/dashboard?completed_task=${id}`)}`)
     }
   } catch (error) {
