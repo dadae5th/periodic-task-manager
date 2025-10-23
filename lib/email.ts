@@ -90,19 +90,26 @@ class EmailService {
       `
       
       overdueTasks.forEach(task => {
-        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(task.assignee)}&debug=email_overdue`
-        console.log(`🔗 지연업무 완료 URL 생성:`, { taskId: task.id, assignee: task.assignee, url: completeUrl })
+        // 더 안전한 URL 구성
+        const assignee = task.assignee || 'unknown@example.com'
+        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_overdue`
+        console.log(`🔗 지연업무 완료 URL 생성:`, { 
+          taskId: task.id, 
+          assignee: assignee, 
+          url: completeUrl,
+          taskTitle: task.title 
+        })
         
         tasksList += `
           <div style="background: #fff5f5; border: 1px solid #fed7d7; border-radius: 5px; padding: 15px; margin: 10px 0;">
             <h4 style="margin: 0 0 10px 0;">${task.title}</h4>
-            <p style="color: #666; margin: 5px 0;">담당자: ${task.assignee}</p>
+            <p style="color: #666; margin: 5px 0;">담당자: ${assignee}</p>
             <p style="color: #dc3545; margin: 5px 0; font-weight: bold;">마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')}</p>
             <a href="${completeUrl}" 
                style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 10px;">
               ✅ 완료
             </a>
-            <p style="font-size: 10px; color: #999; margin-top: 5px;">Debug: ${task.id} | ${task.assignee}</p>
+            <p style="font-size: 10px; color: #999; margin-top: 5px;">Debug: ${task.id} | ${assignee}</p>
           </div>
         `
       })
@@ -118,19 +125,26 @@ class EmailService {
       `
       
       tasks.forEach(task => {
-        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(task.assignee)}&debug=email_today`
-        console.log(`🔗 오늘업무 완료 URL 생성:`, { taskId: task.id, assignee: task.assignee, url: completeUrl })
+        // 더 안전한 URL 구성
+        const assignee = task.assignee || 'unknown@example.com'
+        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_today`
+        console.log(`🔗 오늘업무 완료 URL 생성:`, { 
+          taskId: task.id, 
+          assignee: assignee, 
+          url: completeUrl,
+          taskTitle: task.title 
+        })
         
         tasksList += `
           <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0;">
             <h4 style="margin: 0 0 10px 0;">${task.title}</h4>
-            <p style="color: #666; margin: 5px 0;">담당자: ${task.assignee}</p>
+            <p style="color: #666; margin: 5px 0;">담당자: ${assignee}</p>
             <p style="color: #666; margin: 5px 0;">마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')}</p>
             <a href="${completeUrl}" 
                style="background: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 10px;">
               ✅ 완료
             </a>
-            <p style="font-size: 10px; color: #999; margin-top: 5px;">Debug: ${task.id} | ${task.assignee}</p>
+            <p style="font-size: 10px; color: #999; margin-top: 5px;">Debug: ${task.id} | ${assignee}</p>
           </div>
         `
       })
