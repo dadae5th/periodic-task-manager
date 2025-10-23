@@ -35,8 +35,11 @@ async function handler(
 async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse, id: string) {
   try {
     console.log('=== 이메일 완료 요청 디버깅 ===')
-    console.log('URL:', req.url)
-    console.log('전체 query 객체:', req.query)
+    console.log('요청 시각:', new Date().toISOString())
+    console.log('HTTP Method:', req.method)
+    console.log('Full URL:', req.url)
+    console.log('Headers:', JSON.stringify(req.headers, null, 2))
+    console.log('전체 query 객체:', JSON.stringify(req.query, null, 2))
     console.log('개별 파라미터들:', {
       id: req.query.id,
       completed_by: req.query.completed_by,
@@ -46,13 +49,19 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
     
     const { completed_by, notify_email, auto_login } = req.query
 
-    console.log('이메일 완료 요청:', { id, completed_by, auto_login })
+    console.log('추출된 파라미터:', { completed_by, auto_login, typeof_completed_by: typeof completed_by })
 
     if (!completed_by || typeof completed_by !== 'string') {
-      console.error('completed_by 파라미터 누락:', { completed_by, type: typeof completed_by })
+      console.error('❌ completed_by 파라미터 문제:', { 
+        completed_by, 
+        type: typeof completed_by,
+        query_keys: Object.keys(req.query),
+        full_query: req.query
+      })
       
       // completed_by가 없으면 업무의 assignee를 사용하도록 시도
       try {
+        console.log('🔄 업무 담당자 조회 시도...')
         const { data: task, error: fetchError } = await (supabaseAdmin as any)
           .from('tasks')
           .select('assignee')
@@ -60,18 +69,22 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
           .single()
         
         if (!fetchError && task && task.assignee) {
-          console.log(`completed_by 파라미터가 없어서 업무 담당자 사용: ${task.assignee}`)
+          console.log(`✅ completed_by 파라미터가 없어서 업무 담당자 사용: ${task.assignee}`)
           // 담당자 정보로 재귀 호출
           req.query.completed_by = task.assignee
           return handleCompleteFromEmail(req, res, id)
+        } else {
+          console.error('❌ 업무 담당자 조회 실패:', { fetchError, task })
         }
       } catch (error) {
-        console.error('업무 담당자 조회 실패:', error)
+        console.error('❌ 업무 담당자 조회 예외:', error)
       }
       
-      return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/login?error=${encodeURIComponent('완료자 정보가 필요합니다.')}`)
+      const errorMsg = `completed_by 파라미터가 누락되었습니다. Query: ${JSON.stringify(req.query)}`
+      return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/login?error=${encodeURIComponent(errorMsg)}`)
     }
 
+    console.log('✅ completed_by 파라미터 확인됨:', completed_by)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
 
     // 먼저 업무 정보 조회
