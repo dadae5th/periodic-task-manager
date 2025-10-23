@@ -16,8 +16,26 @@ export default function Login() {
     // 로그인 페이지에서는 항상 로그인 화면을 보여줌 (다중 사용자 환경)
     // 기존 세션이 있어도 명시적으로 로그인하도록 함
 
-    // URL 파라미터에서 메시지 처리
-    const { message, error: urlError } = router.query
+    // URL 파라미터에서 이메일과 메시지 처리
+    const { message, error: urlError, email: urlEmail, redirect } = router.query
+    
+    // 이메일 파라미터가 있으면 자동으로 입력 필드에 설정
+    if (urlEmail && typeof urlEmail === 'string') {
+      setEmail(urlEmail)
+      console.log('이메일 자동 설정:', urlEmail)
+      
+      // 이메일이 있으면 자동 로그인 시도 (임시 비밀번호로)
+      if (urlEmail.includes('@')) {
+        setPassword('temp123') // 임시 비밀번호
+        console.log('자동 로그인 시도 중...')
+        
+        // 약간의 딜레이 후 자동 로그인
+        setTimeout(() => {
+          handleAutoLogin(urlEmail, redirect as string)
+        }, 500)
+      }
+    }
+    
     if (message && typeof message === 'string') {
       // 성공 메시지는 콘솔에만 표시 (UI는 깔끔하게 유지)
       console.log('알림:', message)
@@ -26,6 +44,50 @@ export default function Login() {
       setError(urlError)
     }
   }, [router])
+
+  // 자동 로그인 함수
+  const handleAutoLogin = async (userEmail: string, redirectUrl?: string) => {
+    try {
+      setLoading(true)
+      console.log('자동 로그인 시도:', { userEmail, redirectUrl })
+      
+      // 임시 비밀번호로 로그인 시도
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email: userEmail, 
+          password: 'temp123' 
+        })
+      })
+
+      if (response.ok) {
+        const data: ApiResponse = await response.json()
+        console.log('자동 로그인 성공:', data)
+        
+        if (data.success && data.data?.token) {
+          // 토큰 저장
+          localStorage.setItem('authToken', data.data.token)
+          localStorage.setItem('currentUser', JSON.stringify(data.data.user))
+          
+          // 리다이렉트 URL이 있으면 해당 페이지로, 없으면 대시보드로
+          const targetUrl = redirectUrl || '/dashboard'
+          console.log('리다이렉트:', targetUrl)
+          router.push(targetUrl)
+          return
+        }
+      }
+      
+      // 자동 로그인 실패시 수동 로그인 유도
+      console.log('자동 로그인 실패, 수동 로그인 필요')
+      setLoading(false)
+    } catch (error) {
+      console.error('자동 로그인 오류:', error)
+      setLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

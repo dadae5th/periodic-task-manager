@@ -90,10 +90,10 @@ class EmailService {
       `
       
       overdueTasks.forEach(task => {
-        // 더 안전한 URL 구성
+        // 더 안전한 URL 구성 - 대시보드 바로가기와 동일한 방식
         const assignee = task.assignee || 'unknown@example.com'
-        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_overdue`
-        console.log(`🔗 지연업무 완료 URL 생성:`, { 
+        const completeUrl = `${appUrl}/login?redirect=${encodeURIComponent(`/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_overdue`)}&email=${encodeURIComponent(assignee)}`
+        console.log(`🔗 지연업무 완료 URL 생성 (로그인 방식):`, { 
           taskId: task.id, 
           assignee: assignee, 
           url: completeUrl,
@@ -125,10 +125,10 @@ class EmailService {
       `
       
       tasks.forEach(task => {
-        // 더 안전한 URL 구성
+        // 더 안전한 URL 구성 - 대시보드 바로가기와 동일한 방식
         const assignee = task.assignee || 'unknown@example.com'
-        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_today`
-        console.log(`🔗 오늘업무 완료 URL 생성:`, { 
+        const completeUrl = `${appUrl}/login?redirect=${encodeURIComponent(`/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_today`)}&email=${encodeURIComponent(assignee)}`
+        console.log(`🔗 오늘업무 완료 URL 생성 (로그인 방식):`, { 
           taskId: task.id, 
           assignee: assignee, 
           url: completeUrl,
