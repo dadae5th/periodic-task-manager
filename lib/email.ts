@@ -95,7 +95,7 @@ class EmailService {
             <h4 style="margin: 0 0 10px 0;">${task.title}</h4>
             <p style="color: #666; margin: 5px 0;">담당자: ${task.assignee}</p>
             <p style="color: #dc3545; margin: 5px 0; font-weight: bold;">마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')}</p>
-            <a href="${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(recipient)}" 
+            <a href="${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(task.assignee)}" 
                style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 10px;">
               ✅ 완료
             </a>
@@ -119,7 +119,7 @@ class EmailService {
             <h4 style="margin: 0 0 10px 0;">${task.title}</h4>
             <p style="color: #666; margin: 5px 0;">담당자: ${task.assignee}</p>
             <p style="color: #666; margin: 5px 0;">마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')}</p>
-            <a href="${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(recipient)}" 
+            <a href="${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(task.assignee)}" 
                style="background: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 10px;">
               ✅ 완료
             </a>
@@ -163,7 +163,7 @@ class EmailService {
             ${tasksList}
             
             <div style="text-align: center; margin-top: 30px;">
-                <a href="${appUrl}/dashboard?auto_login=true" 
+                <a href="${appUrl}/login?redirect=${encodeURIComponent('/dashboard')}&email=${encodeURIComponent(recipient)}" 
                    style="background: #6c757d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                   📊 대시보드 바로가기
                 </a>
