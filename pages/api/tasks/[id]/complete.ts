@@ -38,58 +38,115 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
     console.log('요청 시각:', new Date().toISOString())
     console.log('HTTP Method:', req.method)
     console.log('Full URL:', req.url)
-    console.log('Headers:', JSON.stringify(req.headers, null, 2))
     console.log('전체 query 객체:', JSON.stringify(req.query, null, 2))
-    console.log('개별 파라미터들:', {
-      id: req.query.id,
-      completed_by: req.query.completed_by,
-      auto_login: req.query.auto_login,
-      notify_email: req.query.notify_email
-    })
     
-    const { completed_by, notify_email, auto_login } = req.query
+    const { completed_by, auto_login, force_login, source } = req.query
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
 
-    console.log('추출된 파라미터:', { completed_by, auto_login, typeof_completed_by: typeof completed_by })
+    console.log('추출된 파라미터:', { completed_by, auto_login, force_login, source })
 
-    if (!completed_by || typeof completed_by !== 'string') {
-      console.error('❌ completed_by 파라미터 문제:', { 
-        completed_by, 
-        type: typeof completed_by,
-        query_keys: Object.keys(req.query),
-        full_query: req.query
-      })
+    // force_login이 true이면 무조건 자동 로그인 처리
+    if (force_login === 'true') {
+      console.log('🚀 강제 자동 로그인 모드 활성화')
       
-      // completed_by가 없으면 업무의 assignee를 사용하도록 시도
-      try {
-        console.log('🔄 업무 담당자 조회 시도...')
-        const { data: task, error: fetchError } = await (supabaseAdmin as any)
-          .from('tasks')
-          .select('assignee, title')
-          .eq('id', id)
-          .single()
-        
-        if (!fetchError && task && task.assignee) {
-          console.log(`✅ completed_by 파라미터가 없어서 업무 담당자 사용: ${task.assignee} (업무: ${task.title})`)
-          // 담당자 정보로 재귀 호출
-          req.query.completed_by = task.assignee
-          req.query.auto_login = 'true' // 강제로 자동 로그인 활성화
-          return handleCompleteFromEmail(req, res, id)
-        } else {
-          console.error('❌ 업무 담당자 조회 실패:', { fetchError, task })
+      let assignee = completed_by as string
+      
+      // completed_by가 없으면 업무의 assignee를 사용
+      if (!assignee || typeof assignee !== 'string') {
+        try {
+          console.log('🔄 업무 담당자 조회 시도...')
+          const { data: task, error: fetchError } = await (supabaseAdmin as any)
+            .from('tasks')
+            .select('assignee, title')
+            .eq('id', id)
+            .single()
+          
+          if (!fetchError && task && task.assignee) {
+            assignee = task.assignee
+            console.log(`✅ 업무 담당자 사용: ${assignee} (업무: ${task.title})`)
+          } else {
+            console.log('❌ 업무 담당자 조회 실패, 기본값 사용')
+            assignee = 'test@example.com'
+          }
+        } catch (error) {
+          console.error('❌ 업무 담당자 조회 예외:', error)
+          assignee = 'test@example.com'
         }
-      } catch (error) {
-        console.error('❌ 업무 담당자 조회 예외:', error)
       }
       
-      // 그래도 실패하면 기본 사용자로 처리 (최후의 수단)
-      console.log('🆘 최후의 수단: 기본 이메일 사용')
-      req.query.completed_by = 'test@example.com'
+      // 강제 자동 로그인으로 업무 완료 처리
+      console.log(`� 강제 자동 로그인으로 업무 완료 처리: ${assignee}`)
+      req.query.completed_by = assignee
       req.query.auto_login = 'true'
-      return handleCompleteFromEmail(req, res, id)
+      
+      // 계속해서 처리...
     }
 
-    console.log('✅ completed_by 파라미터 확인됨:', completed_by)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
+    const completed_by_final = req.query.completed_by as string
+
+    if (!completed_by_final || typeof completed_by_final !== 'string') {
+      console.error('❌ completed_by 파라미터 최종 확인 실패')
+      const errorMsg = `완료자 정보가 누락되었습니다. 디버깅 정보: URL=${req.url}, Query=${JSON.stringify(req.query, null, 2)}`
+      console.error('❌ 최종 에러:', errorMsg)
+      return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent(errorMsg)}`)
+    }
+
+    console.log('✅ completed_by 파라미터 최종 확인:', completed_by_final)
+
+    // 먼저 업무 완료 처리 수행
+    console.log('📋 업무 완료 처리 시작...')
+    
+    // 업무 정보 조회
+    const { data: taskData, error: taskFetchError } = await (supabaseAdmin as any)
+      .from('tasks')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (taskFetchError) {
+      console.error('업무 조회 실패:', taskFetchError)
+      if (taskFetchError.code === 'PGRST116') {
+        return res.redirect(302, `${appUrl}/dashboard?error=task_not_found`)
+      }
+      return res.redirect(302, `${appUrl}/dashboard?error=fetch_failed`)
+    }
+
+    if (taskData.completed) {
+      console.log('이미 완료된 업무')
+      return res.redirect(302, `${appUrl}/dashboard?message=already_completed`)
+    }
+
+    const taskCompletedAt = new Date().toISOString()
+
+    // 완료 기록 추가
+    const { data: taskCompletion, error: taskCompletionError } = await (supabaseAdmin as any)
+      .from('task_completions')
+      .insert([{
+        task_id: id,
+        completed_by: completed_by_final,
+        completed_at: taskCompletedAt
+      }])
+      .select()
+      .single()
+
+    if (taskCompletionError) {
+      console.error('완료 기록 생성 실패:', taskCompletionError)
+    }
+
+    // 업무 상태 업데이트
+    const { error: taskUpdateError } = await (supabaseAdmin as any)
+      .from('tasks')
+      .update({
+        completed: taskData.frequency === 'once' ? true : false,
+        updated_at: taskCompletedAt
+      })
+      .eq('id', id)
+
+    if (taskUpdateError) {
+      console.error('업무 업데이트 실패:', taskUpdateError)
+    } else {
+      console.log('✅ 업무 완료 처리 성공')
+    }
 
     // 먼저 업무 정보 조회
     const { data: task, error: fetchError } = await (supabaseAdmin as any)
@@ -161,58 +218,56 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
       return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('업무 업데이트에 실패했습니다.')}`)
     }
 
-    // 간소화된 자동 로그인 처리 (auto_login=true인 경우에만)
-    if (auto_login === 'true') {
-      try {
-        console.log('자동 로그인 처리 시작:', { email: completedBy, task_id: id })
-        
-        // 사용자 정보 조회
-        let { data: user, error: userError } = await (supabaseAdmin as any)
+    // 간소화된 자동 로그인 처리
+    console.log('🔄 자동 로그인 처리 시작:', { email: completed_by_final, task_id: id })
+    
+    try {
+      // 사용자 정보 조회 또는 생성
+      let { data: user, error: userError } = await (supabaseAdmin as any)
+        .from('users')
+        .select('id, email, name, role')
+        .eq('email', completed_by_final)
+        .single()
+
+      // 사용자가 없으면 자동 생성
+      if (userError && userError.code === 'PGRST116') {
+        console.log(`🆕 사용자 ${completed_by_final} 자동 생성`)
+        const { data: newUser, error: createError } = await (supabaseAdmin as any)
           .from('users')
-          .select('id, email, name, role')
-          .eq('email', completedBy)
+          .insert([{
+            email: completed_by_final,
+            name: completed_by_final.split('@')[0],
+            password: 'temp123',
+            role: 'user'
+          }])
+          .select()
           .single()
 
-        // 사용자가 없으면 자동 생성
-        if (userError && userError.code === 'PGRST116') {
-          console.log(`사용자 ${completedBy} 자동 생성`)
-          const { data: newUser, error: createError } = await (supabaseAdmin as any)
-            .from('users')
-            .insert([{
-              email: completedBy,
-              name: completedBy.split('@')[0],
-              password: 'temp123', // 임시 비밀번호 설정
-              role: 'user'
-            }])
-            .select()
-            .single()
-
-          if (createError) {
-            console.error('사용자 생성 실패:', createError)
-            return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('사용자 생성 실패')}`)
-          }
+        if (createError) {
+          console.error('❌ 사용자 생성 실패:', createError)
+        } else {
           user = newUser
-        } else if (userError || !user) {
-          console.error('사용자 조회 실패:', userError)
-          return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('사용자 조회 실패')}`)
+          console.log('✅ 새 사용자 생성 성공:', user)
         }
-
-        // 간단한 인증 토큰 생성 (simplified)
-        const sessionToken = generateToken(user)
-
-        // URL에 토큰을 포함하여 대시보드로 리다이렉트 (임시 방식)
-        const redirectUrl = `${appUrl}/task-complete?token=${encodeURIComponent(sessionToken)}&task=${id}&user=${encodeURIComponent(user.email)}&message=${encodeURIComponent('업무가 완료되었습니다!')}`
-        console.log('자동 로그인 성공, 리디렉션:', redirectUrl)
-        return res.redirect(302, redirectUrl)
-
-      } catch (autoLoginError) {
-        console.error('자동 로그인 처리 오류:', autoLoginError)
-        // 자동 로그인 실패시 수동 로그인 페이지로
-        return res.redirect(302, `${appUrl}/login?message=${encodeURIComponent('업무가 완료되었습니다. 로그인해주세요.')}&redirect=${encodeURIComponent(`/dashboard?completed_task=${id}`)}`)
       }
-    } else {
-      // auto_login이 false이거나 없는 경우 수동 로그인 페이지로
-      return res.redirect(302, `${appUrl}/login?message=${encodeURIComponent('업무가 완료되었습니다. 로그인해주세요.')}&redirect=${encodeURIComponent(`/dashboard?completed_task=${id}`)}`)
+
+      if (!user) {
+        console.error('❌ 사용자 정보 없음')
+        throw new Error('사용자 정보를 찾을 수 없습니다')
+      }
+
+      // 인증 토큰 생성
+      const sessionToken = generateToken(user)
+      console.log('✅ 토큰 생성 성공')
+
+      // URL에 토큰을 포함하여 완료 페이지로 리다이렉트
+      const redirectUrl = `${appUrl}/task-complete?token=${encodeURIComponent(sessionToken)}&task=${id}&user=${encodeURIComponent(user.email)}&message=${encodeURIComponent('업무가 완료되었습니다!')}`
+      console.log('✅ 자동 로그인 성공, 리디렉션:', redirectUrl)
+      return res.redirect(302, redirectUrl)
+
+    } catch (error) {
+      console.error('❌ 자동 로그인 처리 오류:', error)
+      return res.redirect(302, `${appUrl}/login?message=${encodeURIComponent('업무를 완료하려면 로그인해주세요.')}&email=${encodeURIComponent(completed_by_final)}&redirect=${encodeURIComponent(`/api/tasks/${id}/complete`)}`)
     }
   } catch (error) {
     console.error('업무 완료 처리 중 오류:', error)
