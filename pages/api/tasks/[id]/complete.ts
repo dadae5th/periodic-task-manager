@@ -40,18 +40,24 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
     console.log('Full URL:', req.url)
     console.log('전체 query 객체:', JSON.stringify(req.query, null, 2))
     
-    const { completed_by, auto_login, force_login, source } = req.query
+    const { completed_by, auto_login, force_login, source, recipient } = req.query
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
 
-    console.log('추출된 파라미터:', { completed_by, auto_login, force_login, source })
+    console.log('추출된 파라미터:', { completed_by, auto_login, force_login, source, recipient })
 
     // force_login이 true이면 무조건 자동 로그인 처리
     if (force_login === 'true') {
       console.log('🚀 강제 자동 로그인 모드 활성화')
       
-      let assignee = completed_by as string
+      let assignee = completed_by as string || recipient as string
       
-      // completed_by가 없으면 업무의 assignee를 사용
+      console.log(`🔍 담당자 결정 과정:`, {
+        completed_by: completed_by,
+        recipient: recipient,
+        selectedAssignee: assignee
+      })
+      
+      // completed_by와 recipient 모두 없으면 업무의 assignee를 사용
       if (!assignee || typeof assignee !== 'string') {
         try {
           console.log('🔄 업무 담당자 조회 시도...')

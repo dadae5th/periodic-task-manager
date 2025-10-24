@@ -90,9 +90,18 @@ class EmailService {
       `
       
       overdueTasks.forEach(task => {
+        // 더 강력한 assignee 처리
+        let assignee = task.assignee || recipient || 'unknown@example.com'
+        console.log(`📧 지연업무 담당자 확인:`, { 
+          taskId: task.id,
+          taskAssignee: task.assignee,
+          recipient: recipient,
+          finalAssignee: assignee,
+          taskTitle: task.title 
+        })
+        
         // 단순화된 직접 완료 URL
-        const assignee = task.assignee || 'unknown@example.com'
-        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_overdue&force_login=true`
+        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_overdue&force_login=true&recipient=${encodeURIComponent(recipient)}`
         console.log(`🔗 지연업무 완료 URL 생성:`, { 
           taskId: task.id, 
           assignee: assignee, 
@@ -109,7 +118,7 @@ class EmailService {
                style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 10px;">
               ✅ 완료
             </a>
-            <p style="font-size: 10px; color: #999; margin-top: 5px;">Debug: ${task.id} | ${assignee}</p>
+            <p style="font-size: 10px; color: #999; margin-top: 5px;">Debug: ${task.id} | ${assignee} | ${recipient}</p>
           </div>
         `
       })
@@ -125,9 +134,18 @@ class EmailService {
       `
       
       tasks.forEach(task => {
+        // 더 강력한 assignee 처리
+        let assignee = task.assignee || recipient || 'unknown@example.com'
+        console.log(`📧 오늘업무 담당자 확인:`, { 
+          taskId: task.id,
+          taskAssignee: task.assignee,
+          recipient: recipient,
+          finalAssignee: assignee,
+          taskTitle: task.title 
+        })
+        
         // 단순화된 직접 완료 URL
-        const assignee = task.assignee || 'unknown@example.com'
-        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_today&force_login=true`
+        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_today&force_login=true&recipient=${encodeURIComponent(recipient)}`
         console.log(`🔗 오늘업무 완료 URL 생성:`, { 
           taskId: task.id, 
           assignee: assignee, 
@@ -144,7 +162,7 @@ class EmailService {
                style="background: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 10px;">
               ✅ 완료
             </a>
-            <p style="font-size: 10px; color: #999; margin-top: 5px;">Debug: ${task.id} | ${assignee}</p>
+            <p style="font-size: 10px; color: #999; margin-top: 5px;">Debug: ${task.id} | ${assignee} | ${recipient}</p>
           </div>
         `
       })
