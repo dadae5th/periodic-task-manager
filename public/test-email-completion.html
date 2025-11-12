@@ -74,25 +74,25 @@
     </div>
     
     <div class="test-section">
-        <h3>🔗 1. GET 방식 일괄완료 테스트 (가장 일반적)</h3>
-        <p>이메일에서 완료 버튼을 직접 클릭하는 방식과 동일합니다.</p>
-        <a href="https://periodic-task-manager.vercel.app/api/tasks/batch-complete?tasks=test-task-1,test-task-2&completed_by=test@example.com" class="btn">
-            GET 방식으로 완료 처리
+        <h3>� 1. 완료 버튼 제거됨</h3>
+        <p style="background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeaa7;">
+            ❌ <strong>모든 완료 버튼이 제거되었습니다.</strong><br>
+            대신 대시보드에서 직접 완료 처리하세요.
+        </p>
+        <a href="https://periodic-task-manager.vercel.app/dashboard" class="btn" style="background: #007bff;">
+            📊 대시보드로 이동
         </a>
-        <div class="log">
-https://periodic-task-manager.vercel.app/api/tasks/batch-complete?tasks=test-task-1,test-task-2&completed_by=test@example.com
-        </div>
     </div>
     
     <div class="test-section">
-        <h3>📝 2. POST 방식 일괄완료 테스트</h3>
-        <p>이메일 폼에서 완료 버튼을 클릭하는 방식과 동일합니다.</p>
-        <form method="post" action="https://periodic-task-manager.vercel.app/api/tasks/batch-complete" style="margin: 10px 0;">
-            <input type="hidden" name="completed_by" value="test@example.com" />
-            <input type="hidden" name="task_ids" value="test-task-1" />
-            <input type="hidden" name="task_ids" value="test-task-2" />
-            <button type="submit" class="btn btn-batch">POST 방식으로 완료 처리</button>
-        </form>
+        <h3>� 2. 완료 기능 완전 제거</h3>
+        <p style="background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeaa7;">
+            ❌ <strong>모든 완료 기능이 제거되었습니다.</strong><br>
+            이메일에서 완료 처리가 불가능합니다. 대시보드를 이용하세요.
+        </p>
+        <a href="https://periodic-task-manager.vercel.app/dashboard" class="btn" style="background: #007bff;">
+            📊 대시보드로 이동
+        </a>
     </div>
 
     <div class="test-section">

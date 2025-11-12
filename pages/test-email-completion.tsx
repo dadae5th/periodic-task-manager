@@ -54,25 +54,24 @@ export default function EmailCompletionTest() {
           </div>
         </div>
         
-        <div style={{ background: '#f8f9fa', padding: '20px', margin: '20px 0', borderRadius: '8px', border: '1px solid #dee2e6' }}>
-          <h3>📝 2. POST 방식 일괄완료 테스트</h3>
-          <p>이메일 폼에서 완료 버튼을 클릭하는 방식을 시뮬레이션합니다.</p>
-          <form method="post" action={`${appUrl}/api/tasks/batch-complete`} style={{ margin: '10px 0' }}>
-            <input type="hidden" name="completed_by" value={testEmail} />
-            <input type="hidden" name="task_ids" value="test-task-1" />
-            <input type="hidden" name="task_ids" value="test-task-2" />
-            <div style={{ 
-                padding: '12px 24px', 
-                margin: '10px', 
-                background: '#f8f9fa', 
-                color: '#666',
-                border: '1px solid #dee2e6',
-                borderRadius: '5px',
-                fontSize: '16px'
-              }}>
-              ❌ 완료 버튼이 제거되었습니다. 대시보드에서 완료 처리하세요.
-            </div>
-          </form>
+        <div style={{ background: '#fff3cd', padding: '20px', margin: '20px 0', borderRadius: '8px', border: '1px solid #ffeaa7' }}>
+          <h3>� 2. 완료 기능 완전 제거</h3>
+          <p style={{ margin: '10px 0' }}>
+            ❌ <strong>모든 완료 버튼과 폼이 제거되었습니다.</strong><br/>
+            이메일에서 완료 처리가 불가능합니다. 대시보드를 이용하세요.
+          </p>
+          <a href={`${appUrl}/dashboard`} style={{ 
+              display: 'inline-block',
+              padding: '12px 24px', 
+              margin: '10px 5px', 
+              background: '#007bff', 
+              color: 'white', 
+              textDecoration: 'none', 
+              borderRadius: '5px',
+              fontSize: '16px'
+            }}>
+            📊 대시보드로 이동
+          </a>
         </div>
         
         <div style={{ background: '#f8f9fa', padding: '20px', margin: '20px 0', borderRadius: '8px', border: '1px solid #dee2e6' }}>
