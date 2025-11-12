@@ -37,10 +37,14 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
   
   try {
     console.log('=== 이메일 완료 요청 시작 ===')
-    console.log('URL:', req.url)
-    console.log('Query:', req.query)
+    console.log('🕐 시각:', new Date().toISOString())
+    console.log('📍 URL:', req.url)
+    console.log('🔢 업무 ID:', id)
+    console.log('📝 Query 파라미터:', JSON.stringify(req.query, null, 2))
+    console.log('🌐 App URL:', appUrl)
     
     // 1단계: 업무 조회 및 담당자 확인
+    console.log('🔍 1단계: 업무 조회 시작...')
     const { data: task, error: fetchError } = await (supabaseAdmin as any)
       .from('tasks')
       .select('*')
@@ -48,25 +52,43 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
       .single()
 
     if (fetchError) {
-      console.error('업무 조회 실패:', fetchError)
+      console.error('❌ 업무 조회 실패:', JSON.stringify(fetchError, null, 2))
+      console.log('🚨 리다이렉트: dashboard?error=task_not_found')
       return res.redirect(302, `${appUrl}/dashboard?error=task_not_found`)
     }
 
+    console.log('✅ 업무 조회 성공:', {
+      id: task.id,
+      title: task.title,
+      assignee: task.assignee,
+      completed: task.completed,
+      frequency: task.frequency
+    })
+
     if (task.completed && task.frequency === 'once') {
-      console.log('이미 완료된 업무')
+      console.log('⚠️ 이미 완료된 업무 감지')
+      console.log('🚨 리다이렉트: dashboard?message=already_completed')
       return res.redirect(302, `${appUrl}/dashboard?message=already_completed`)
     }
 
     // 2단계: 완료자 결정 (우선순위: completed_by → recipient → assignee)
+    console.log('🔍 2단계: 완료자 결정 시작...')
     const { completed_by, recipient } = req.query
+    console.log('📋 완료자 후보들:', {
+      completed_by: completed_by,
+      recipient: recipient,
+      task_assignee: task.assignee
+    })
+    
     const completedBy = (completed_by as string) || (recipient as string) || task.assignee
 
     if (!completedBy) {
-      console.error('완료자 정보 없음')
+      console.error('❌ 완료자 정보 없음 - 모든 후보가 비어있음')
+      console.log('🚨 리다이렉트: dashboard?error=no_assignee')
       return res.redirect(302, `${appUrl}/dashboard?error=no_assignee`)
     }
 
-    console.log('완료자 결정:', completedBy)
+    console.log('✅ 완료자 결정:', completedBy)
 
     // 3단계: 업무 완료 처리
     const completedAt = new Date().toISOString()
@@ -158,12 +180,14 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
       return res.redirect(302, dashboardUrl)
 
     } catch (error) {
-      console.error('자동 로그인 오류:', error)
+      console.error('❌ 자동 로그인 오류:', error)
+      console.log('🚨 리다이렉트: dashboard (로그인 필요)')
       return res.redirect(302, `${appUrl}/dashboard?message=${encodeURIComponent('업무가 완료되었습니다. 로그인해주세요.')}`)
     }
 
   } catch (error) {
-    console.error('업무 완료 처리 오류:', error)
+    console.error('❌ 업무 완료 처리 최상위 오류:', error)
+    console.log('🚨 최종 리다이렉트: dashboard (처리 오류)')
     return res.redirect(302, `${appUrl}/dashboard?error=${encodeURIComponent('처리 중 오류가 발생했습니다.')}`)
   }
 }
