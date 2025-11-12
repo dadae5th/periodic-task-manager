@@ -100,25 +100,15 @@ class EmailService {
           taskTitle: task.title 
         })
         
-        // 서버사이드 렌더링 완료 페이지 URL (CSP 우회)
-        const completeUrl = `${appUrl}/complete/${task.id}?completed_by=${encodeURIComponent(assignee)}&source=email_overdue&auto_login=true&recipient=${encodeURIComponent(recipient)}`
-        console.log(`🔗 지연업무 완료 URL 생성:`, { 
-          taskId: task.id, 
-          assignee: assignee, 
-          url: completeUrl,
-          taskTitle: task.title 
-        })
-        
         tasksList += `
           <div style="background: #fff5f5; border: 1px solid #fed7d7; border-radius: 5px; padding: 15px; margin: 10px 0;">
-            <h4 style="margin: 0 0 10px 0;">${task.title}</h4>
+            <h4 style="margin: 0 0 10px 0; color: #dc3545;">🚨 ${task.title}</h4>
             <p style="color: #666; margin: 5px 0;">담당자: ${assignee}</p>
-            <p style="color: #dc3545; margin: 5px 0; font-weight: bold;">마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')}</p>
-            <a href="${completeUrl}" 
-               style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 10px;">
-              ✅ 완료
-            </a>
-            <p style="font-size: 10px; color: #999; margin-top: 5px;">Debug: ${task.id} | ${assignee} | ${recipient}</p>
+            <p style="color: #dc3545; margin: 5px 0; font-weight: bold;">마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')} (지연됨)</p>
+            <p style="color: #666; margin: 5px 0; font-size: 14px;">${task.description || '설명 없음'}</p>
+            <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+              <p style="margin: 0; color: #666; font-size: 12px;">⚠️ 지연된 업무입니다. 대시보드에서 완료 처리하세요.</p>
+            </div>
           </div>
         `
       })
@@ -144,25 +134,15 @@ class EmailService {
           taskTitle: task.title 
         })
         
-        // 서버사이드 렌더링 완료 페이지 URL (CSP 우회)
-        const completeUrl = `${appUrl}/complete/${task.id}?completed_by=${encodeURIComponent(assignee)}&source=email_today&auto_login=true&recipient=${encodeURIComponent(recipient)}`
-        console.log(`🔗 오늘업무 완료 URL 생성:`, { 
-          taskId: task.id, 
-          assignee: assignee, 
-          url: completeUrl,
-          taskTitle: task.title 
-        })
-        
         tasksList += `
           <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0;">
-            <h4 style="margin: 0 0 10px 0;">${task.title}</h4>
+            <h4 style="margin: 0 0 10px 0; color: #007bff;">📅 ${task.title}</h4>
             <p style="color: #666; margin: 5px 0;">담당자: ${assignee}</p>
             <p style="color: #666; margin: 5px 0;">마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')}</p>
-            <a href="${completeUrl}" 
-               style="background: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 10px;">
-              ✅ 완료
-            </a>
-            <p style="font-size: 10px; color: #999; margin-top: 5px;">Debug: ${task.id} | ${assignee} | ${recipient}</p>
+            <p style="color: #666; margin: 5px 0; font-size: 14px;">${task.description || '설명 없음'}</p>
+            <div style="margin-top: 10px; padding: 10px; background: #e3f2fd; border-radius: 4px;">
+              <p style="margin: 0; color: #1976d2; font-size: 12px;">💡 대시보드에서 완료 처리하세요.</p>
+            </div>
           </div>
         `
       })
@@ -202,10 +182,14 @@ class EmailService {
         <div class="content">
             ${tasksList}
             
-            <div style="text-align: center; margin-top: 30px;">
-                <a href="${appUrl}/login?redirect=${encodeURIComponent('/dashboard')}&email=${encodeURIComponent(recipient)}" 
-                   style="background: #6c757d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                  📊 대시보드 바로가기
+            <div style="text-align: center; margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px;">
+                <h3 style="color: white; margin: 0 0 15px 0;">📋 업무 관리하기</h3>
+                <p style="color: #f0f0f0; margin: 0 0 20px 0; font-size: 14px;">
+                  대시보드에서 업무를 확인하고 완료 처리하세요
+                </p>
+                <a href="${appUrl}/login?redirect=${encodeURIComponent('/dashboard')}&message=${encodeURIComponent('업무를 확인하고 완료 처리하세요.')}&email=${encodeURIComponent(recipient)}" 
+                   style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-size: 16px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                  � 대시보드로 이동하기
                 </a>
             </div>
         </div>
