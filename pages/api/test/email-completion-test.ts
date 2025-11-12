@@ -48,7 +48,10 @@ export default async function handler(
     <div class="test-section">
         <h3>🔗 1. GET 방식 일괄완료 테스트</h3>
         <p>이메일에서 직접 링크를 클릭하는 방식을 시뮬레이션합니다.</p>
-        <a href="${batchCompleteUrl}" class="btn">GET 방식으로 완료 처리</a>
+        <p style="background: #f8f9fa; padding: 10px; border-radius: 4px; color: #666;">
+            ❌ 완료 버튼이 제거되었습니다. 대시보드에서 완료 처리하세요.
+        </p>
+        <a href="${appUrl}/dashboard" class="btn" style="background: #007bff;">📊 대시보드로 이동</a>
         <div class="log">
 ${batchCompleteUrl}
         </div>
@@ -61,7 +64,9 @@ ${batchCompleteUrl}
             <input type="hidden" name="completed_by" value="${testEmail}" />
             <input type="hidden" name="task_ids" value="test-task-1" />
             <input type="hidden" name="task_ids" value="test-task-2" />
-            <button type="submit" class="btn btn-batch">POST 방식으로 완료 처리</button>
+            <p style="background: #f8f9fa; padding: 10px; border-radius: 4px; color: #666;">
+                ❌ 완료 버튼이 제거되었습니다. 대시보드에서 완료 처리하세요.
+            </p>
         </form>
     </div>
     
@@ -87,7 +92,10 @@ ${batchCompleteUrl}
     <div class="test-section">
         <h3>� 4. 디버그 모드 테스트</h3>
         <p>상세한 로그와 함께 완료 과정을 추적합니다.</p>
-        <a href="${appUrl}/api/test/batch-complete-debug?tasks=${testTaskIds.join(',')}&completed_by=${testEmail}" class="btn" style="background: #dc3545;">🐛 디버그 GET 테스트</a>
+        <p style="background: #f8f9fa; padding: 10px; border-radius: 4px; color: #666;">
+            ❌ 완료 버튼이 제거되었습니다. 대시보드에서 완료 처리하세요.
+        </p>
+        <a href="${appUrl}/dashboard" class="btn" style="background: #007bff;">� 대시보드로 이동</a>
         
         <form method="post" action="${appUrl}/api/test/batch-complete-debug" style="margin: 10px 0; display: inline-block;">
             <input type="hidden" name="completed_by" value="${testEmail}" />

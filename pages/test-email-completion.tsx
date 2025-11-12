@@ -23,20 +23,31 @@ export default function EmailCompletionTest() {
         <div style={{ background: '#f8f9fa', padding: '20px', margin: '20px 0', borderRadius: '8px', border: '1px solid #dee2e6' }}>
           <h3>🔗 1. GET 방식 일괄완료 테스트</h3>
           <p>이메일에서 직접 링크를 클릭하는 방식을 시뮬레이션합니다.</p>
+          <div style={{ 
+              padding: '12px 24px', 
+              margin: '10px', 
+              background: '#f8f9fa', 
+              color: '#666',
+              border: '1px solid #dee2e6', 
+              borderRadius: '5px',
+              fontSize: '16px'
+            }}>
+            ❌ 완료 버튼이 제거되었습니다. 대시보드에서 완료 처리하세요.
+          </div>
           <a 
-            href={`${appUrl}/api/tasks/batch-complete?tasks=${testTaskIds.join(',')}&completed_by=${testEmail}`}
+            href={`${appUrl}/dashboard`}
             style={{ 
               display: 'inline-block', 
               padding: '12px 24px', 
               margin: '10px', 
-              background: '#28a745', 
+              background: '#007bff', 
               color: 'white', 
               textDecoration: 'none', 
               borderRadius: '5px',
               fontSize: '16px'
             }}
           >
-            GET 방식으로 완료 처리
+            📊 대시보드로 이동
           </a>
           <div style={{ background: '#000', color: '#0f0', padding: '15px', borderRadius: '5px', fontFamily: 'monospace', margin: '10px 0' }}>
             {`${appUrl}/api/tasks/batch-complete?tasks=${testTaskIds.join(',')}&completed_by=${testEmail}`}
@@ -50,41 +61,48 @@ export default function EmailCompletionTest() {
             <input type="hidden" name="completed_by" value={testEmail} />
             <input type="hidden" name="task_ids" value="test-task-1" />
             <input type="hidden" name="task_ids" value="test-task-2" />
-            <button 
-              type="submit" 
-              style={{ 
+            <div style={{ 
                 padding: '12px 24px', 
                 margin: '10px', 
-                background: '#17a2b8', 
-                color: 'white', 
-                border: 'none',
+                background: '#f8f9fa', 
+                color: '#666',
+                border: '1px solid #dee2e6',
                 borderRadius: '5px',
-                fontSize: '16px',
-                cursor: 'pointer'
-              }}
-            >
-              POST 방식으로 완료 처리
-            </button>
+                fontSize: '16px'
+              }}>
+              ❌ 완료 버튼이 제거되었습니다. 대시보드에서 완료 처리하세요.
+            </div>
           </form>
         </div>
         
         <div style={{ background: '#f8f9fa', padding: '20px', margin: '20px 0', borderRadius: '8px', border: '1px solid #dee2e6' }}>
           <h3>🔍 3. 디버그 모드 테스트</h3>
           <p>상세한 로그와 함께 완료 과정을 추적합니다.</p>
+          <div style={{ 
+              padding: '12px 24px', 
+              margin: '10px', 
+              background: '#f8f9fa', 
+              color: '#666',
+              border: '1px solid #dee2e6', 
+              borderRadius: '5px',
+              fontSize: '16px'
+            }}>
+            ❌ 완료 버튼이 제거되었습니다. 대시보드에서 완료 처리하세요.
+          </div>
           <a 
-            href={`${appUrl}/api/test/batch-complete-debug?tasks=${testTaskIds.join(',')}&completed_by=${testEmail}`}
+            href={`${appUrl}/dashboard`}
             style={{ 
               display: 'inline-block', 
               padding: '12px 24px', 
               margin: '10px', 
-              background: '#dc3545', 
+              background: '#007bff', 
               color: 'white', 
               textDecoration: 'none', 
               borderRadius: '5px',
               fontSize: '16px'
             }}
           >
-            🐛 디버그 GET 테스트
+            � 대시보드로 이동
           </a>
           
           <form method="post" action={`${appUrl}/api/test/batch-complete-debug`} style={{ margin: '10px 0', display: 'inline-block' }}>

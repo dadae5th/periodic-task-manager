@@ -31,15 +31,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: '업무 생성 실패', details: error })
     }
 
-    // 완료 URL 생성
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(task.assignee)}`
 
     return res.status(200).json({
       success: true,
       task,
-      completeUrl,
-      message: '테스트 업무가 생성되었습니다. 완료 URL을 클릭해서 테스트하세요.'
+      dashboardUrl: `${appUrl}/dashboard?message=${encodeURIComponent('테스트 업무가 생성되었습니다. 대시보드에서 완료 처리하세요.')}&highlight=${task.id}`,
+      message: '테스트 업무가 생성되었습니다. 대시보드에서 완료 처리하세요.'
     })
   } catch (error) {
     console.error('테스트 API 오류:', error)

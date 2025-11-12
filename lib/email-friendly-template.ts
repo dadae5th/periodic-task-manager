@@ -97,7 +97,7 @@ export function generateEmailFriendlyTemplate(tasks: Task[], overdueTasks: Task[
                     <h3>⚡ 오늘 업무 처리</h3>
                     <p>오늘 해야할 업무들을 처리하려면 대시보드에서 확인하고 완료하세요.</p>
                     <a href="${appUrl}/dashboard?filter=today" 
-                       class="btn btn-batch">✅ 오늘 업무 확인하기</a>
+                       class="btn btn-batch">📊 대시보드에서 업무 관리하기</a>
                 </div>
                 
                 <!-- 개별 완료 섹션 -->
