@@ -30,10 +30,14 @@ async function handler(
 }
 
 /**
- * 이메일에서 GET 요청으로 완료 처리 (자동 로그인 포함)
+ * 이메일에서 GET 요청으로 완료 처리 (자동 로그인 포함) - 비활성화됨
  */
 async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse, id: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
+  
+  // 🚫 이메일 완료 버튼 기능 완전 비활성화
+  console.log('❌ 이메일 완료 버튼이 비활성화되었습니다. 대시보드에서 완료 처리하세요.')
+  return res.redirect(302, `${appUrl}/dashboard?message=${encodeURIComponent('이메일 완료 버튼이 비활성화되었습니다. 대시보드에서 완료 처리하세요.')}`)
   
   try {
     console.log('=== 이메일 완료 요청 시작 ===')
