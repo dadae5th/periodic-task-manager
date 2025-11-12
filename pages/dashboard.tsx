@@ -95,17 +95,33 @@ export default function Dashboard() {
     // 이메일에서 온 auto_login 처리
     if (autoLogin === 'true' && token && userParam) {
       try {
-        console.log('🚀 대시보드 자동 로그인 처리:', { token, userParam })
+        console.log('🚀 대시보드 자동 로그인 처리 시작')
+        console.log('📝 받은 파라미터:', { 
+          autoLogin, 
+          hasToken: !!token, 
+          hasUserParam: !!userParam,
+          tokenLength: token?.length || 0,
+          userParamLength: userParam?.length || 0
+        })
         
-        // 토큰과 사용자 정보를 localStorage에 저장
+        // 사용자 정보 파싱
         const userData = JSON.parse(userParam)
+        console.log('👤 사용자 데이터 파싱 성공:', {
+          email: userData.email,
+          name: userData.name,
+          role: userData.role
+        })
+        
+        // localStorage에 저장
         localStorage.setItem('authToken', token)
         localStorage.setItem('currentUser', JSON.stringify(userData))
+        console.log('💾 localStorage 저장 완료')
         
+        // 상태 설정
         setCurrentUser(userData)
         setNewTask(prev => ({ ...prev, assignee: userData.email }))
         
-        // URL에서 auto_login 파라미터 제거
+        // URL 정리
         const newUrl = new URL(window.location.href)
         newUrl.searchParams.delete('auto_login')
         newUrl.searchParams.delete('token')
@@ -114,19 +130,34 @@ export default function Dashboard() {
         
         window.history.replaceState({}, '', newUrl.toString())
         
-        console.log('✅ 자동 로그인 성공')
+        console.log('✅ 자동 로그인 완료 - 로그인 체크 건너뛰기')
         return
       } catch (error) {
         console.error('❌ 자동 로그인 실패:', error)
+        console.error('❌ 실패 상세:', {
+          message: error instanceof Error ? error.message : String(error),
+          token: token?.substring(0, 20) + '...',
+          userParam: userParam?.substring(0, 100) + '...'
+        })
+        // 자동 로그인 실패 시 일반 인증 체크로 진행
       }
     }
     
     // 일반적인 사용자 인증 체크
+    console.log('🔍 일반 사용자 인증 체크 시작')
     const user = getCurrentUser()
+    
     if (!user) {
+      console.log('❌ 사용자 정보 없음 - 로그인 페이지로 이동')
+      console.log('🔄 localStorage 상태:', {
+        hasToken: !!localStorage.getItem('authToken'),
+        hasUser: !!localStorage.getItem('currentUser')
+      })
       router.push('/login')
       return
     }
+    
+    console.log('✅ 일반 인증 성공:', { email: user.email, name: user.name })
     setCurrentUser(user)
     setNewTask(prev => ({ ...prev, assignee: user.email }))
   }, [router])
