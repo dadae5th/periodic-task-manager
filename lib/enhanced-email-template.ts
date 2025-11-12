@@ -73,12 +73,8 @@ export function generateEnhancedDailyEmailHTML(tasks: Task[], overdueTasks: Task
                                 지연: ${Math.ceil((Date.now() - new Date(task.due_date).getTime()) / (1000 * 60 * 60 * 24))}일
                             </div>
                             ${task.description ? `<p style="margin: 5px 0; color: #666;">${task.description}</p>` : ''}
-                            <div style="margin-top: 10px;">
-                                <a href="${appUrl}/api/tasks/${task.id}/complete?completed_by=${encodeURIComponent(task.assignee)}" 
-                                   class="btn btn-complete" 
-                                   style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-size: 14px;">
-                                    ✅ 완료
-                                </a>
+                            <div style="margin-top: 10px; background: #f8f9fa; padding: 10px; border-radius: 4px;">
+                                <p style="margin: 0; color: #666; font-size: 12px;">⚠️ 지연된 업무입니다. 대시보드에서 완료 처리하세요.</p>
                             </div>
                         </div>
                     </div>
@@ -110,12 +106,8 @@ export function generateEnhancedDailyEmailHTML(tasks: Task[], overdueTasks: Task
                                 마감일: ${new Date(task.due_date).toLocaleDateString('ko-KR')}
                             </div>
                             ${task.description ? `<p style="margin: 5px 0; color: #666;">${task.description}</p>` : ''}
-                            <div style="margin-top: 10px;">
-                                <a href="${appUrl}/api/tasks/${task.id}/complete?completed_by=${encodeURIComponent(task.assignee)}" 
-                                   class="btn btn-complete" 
-                                   style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-size: 14px;">
-                                    ✅ 완료
-                                </a>
+                            <div style="margin-top: 10px; background: #e3f2fd; padding: 10px; border-radius: 4px;">
+                                <p style="margin: 0; color: #1976d2; font-size: 12px;">💡 대시보드에서 완료 처리하세요.</p>
                             </div>
                         </div>
                     </div>
