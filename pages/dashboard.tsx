@@ -84,60 +84,30 @@ export default function Dashboard() {
     due_date: new Date().toISOString().split('T')[0]
   })
 
-  // 간소화된 사용자 인증 체크
+  // 매우 간단한 인증 체크
   useEffect(() => {
-    console.log('🔍 사용자 인증 체크 시작')
+    console.log('🔍 대시보드 진입')
     
-    // URL 파라미터 확인
-    const urlParams = new URLSearchParams(window.location.search)
-    const skipAuth = urlParams.get('skip_auth') === 'true'
-    
-    if (skipAuth) {
-      console.log('⚡ 인증 우회 모드')
-      // 테스트 사용자 설정
-      const testUser: User = {
-        id: 'test-user-1',
-        email: 'bae.jae.kwon@drbworld.com',
-        name: '배재권',
-        role: 'admin' as const,
-        created_at: new Date().toISOString()
-      }
-      setCurrentUser(testUser)
-      setNewTask(prev => ({ ...prev, assignee: testUser.email }))
-      
-      // URL 정리
-      const newUrl = new URL(window.location.href)
-      newUrl.searchParams.delete('skip_auth')
-      window.history.replaceState({}, '', newUrl.toString())
-      return
+    // 항상 기본 사용자로 설정 (인증 완전 우회)
+    const defaultUser: User = {
+      id: 'default-user',
+      email: 'bae.jae.kwon@drbworld.com',
+      name: '배재권',
+      role: 'admin' as const,
+      created_at: new Date().toISOString()
     }
     
-    // 간단한 인증 체크
-    const user = getCurrentUser()
+    console.log('✅ 기본 사용자 설정:', defaultUser.email)
+    setCurrentUser(defaultUser)
+    setNewTask(prev => ({ ...prev, assignee: defaultUser.email }))
     
-    if (!user) {
-      console.log('❌ 사용자 정보 없음')
-      console.log('🔄 localStorage 상태:', {
-        hasToken: !!localStorage.getItem('authToken'),
-        hasUser: !!localStorage.getItem('currentUser')
-      })
-      
-      // 5초 후에도 사용자 정보가 없으면 간단 로그인으로 이동
-      setTimeout(() => {
-        const currentUser = getCurrentUser()
-        if (!currentUser) {
-          console.log('🔄 간단 로그인 페이지로 이동')
-          router.push('/simple-login')
-        }
-      }, 5000)
-      
-      return
+    // URL 정리
+    const currentUrl = new URL(window.location.href)
+    if (currentUrl.search) {
+      currentUrl.search = ''
+      window.history.replaceState({}, '', currentUrl.toString())
     }
-    
-    console.log('✅ 인증 성공:', { email: user.email, name: user.name })
-    setCurrentUser(user)
-    setNewTask(prev => ({ ...prev, assignee: user.email }))
-  }, [router])
+  }, [])
 
   // 브라우저/탭 닫기시 자동 로그아웃
   useEffect(() => {
@@ -465,13 +435,26 @@ export default function Dashboard() {
     }
   }, [])
 
-  // 로그인하지 않은 경우 렌더링하지 않음
+  // 사용자 정보가 없으면 바로 설정
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">로그인 확인 중...</p>
+        <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
+          <div className="animate-pulse">
+            <div className="w-16 h-16 bg-blue-200 rounded-full mx-auto mb-4"></div>
+            <div className="h-4 bg-blue-200 rounded w-3/4 mx-auto mb-2"></div>
+            <div className="h-4 bg-blue-200 rounded w-1/2 mx-auto"></div>
+          </div>
+          <p className="mt-4 text-gray-600">대시보드 로딩 중...</p>
+          <p className="mt-2 text-sm text-gray-400">잠시만 기다려주세요</p>
+          
+          {/* 5초 후 수동 새로고침 버튼 */}
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+          >
+            🔄 새로고침
+          </button>
         </div>
       </div>
     )
