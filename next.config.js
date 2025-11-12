@@ -13,7 +13,7 @@ const nextConfig = {
   // 빌드 최적화
   compress: true,
   poweredByHeader: false,
-  // 보안 헤더 (CSP 임시 비활성화)
+  // 보안 헤더 (CSP 임시 비활성화, PWA 알림 차단)
   async headers() {
     return [
       {
@@ -30,6 +30,10 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'notifications=(), push=(), geolocation=(), microphone=(), camera=()',
           },
           // CSP 완전 제거 - 이메일 자동 로그인 문제 해결을 위해
           // {

@@ -1,0 +1,9 @@
+{
+  "name": "주기별 업무 관리 시스템",
+  "short_name": "업무관리",
+  "display": "browser",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "icons": []
+}
