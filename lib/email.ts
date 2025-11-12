@@ -100,8 +100,8 @@ class EmailService {
           taskTitle: task.title 
         })
         
-        // 단순화된 직접 완료 URL
-        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_overdue&force_login=true&recipient=${encodeURIComponent(recipient)}`
+        // 서버사이드 렌더링 완료 페이지 URL (CSP 우회)
+        const completeUrl = `${appUrl}/complete/${task.id}?completed_by=${encodeURIComponent(assignee)}&source=email_overdue&auto_login=true&recipient=${encodeURIComponent(recipient)}`
         console.log(`🔗 지연업무 완료 URL 생성:`, { 
           taskId: task.id, 
           assignee: assignee, 
@@ -144,8 +144,8 @@ class EmailService {
           taskTitle: task.title 
         })
         
-        // 단순화된 직접 완료 URL
-        const completeUrl = `${appUrl}/api/tasks/${task.id}/complete?auto_login=true&completed_by=${encodeURIComponent(assignee)}&source=email_today&force_login=true&recipient=${encodeURIComponent(recipient)}`
+        // 서버사이드 렌더링 완료 페이지 URL (CSP 우회)
+        const completeUrl = `${appUrl}/complete/${task.id}?completed_by=${encodeURIComponent(assignee)}&source=email_today&auto_login=true&recipient=${encodeURIComponent(recipient)}`
         console.log(`🔗 오늘업무 완료 URL 생성:`, { 
           taskId: task.id, 
           assignee: assignee, 
