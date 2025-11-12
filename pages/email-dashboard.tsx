@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
 import Head from 'next/head'
-import { useRouter } from 'next/router'
-import { Task, ApiResponse, User } from '@/types'
+import { GetServerSideProps } from 'next'
+import { Task, User } from '@/types'
+import { supabaseAdmin } from '@/lib/supabase'
 
 interface DashboardStats {
   total_tasks: number
@@ -13,129 +13,22 @@ interface DashboardStats {
   today_completion_rate: number
 }
 
-export default function EmailDashboard() {
-  const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [stats, setStats] = useState<DashboardStats>({
-    total_tasks: 0,
-    completed_today: 0,
-    overdue_tasks: 0,
-    pending_tasks: 0,
-    completion_rate: 0,
-    today_tasks: 0,
-    today_completion_rate: 0
-  })
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string>('')
+interface EmailDashboardProps {
+  user?: User
+  message?: string
+  tasks: Task[]
+  stats: DashboardStats
+  error?: string
+}
 
-  // 이메일에서 온 사용자 자동 인증 처리 (인증 우회)
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const token = urlParams.get('token')
-    const userParam = urlParams.get('user')
-    const messageParam = urlParams.get('message')
-    
-    console.log('📧 이메일 대시보드 접근:', { hasToken: !!token, hasUser: !!userParam })
-    
-    if (messageParam) {
-      setMessage(decodeURIComponent(messageParam))
-    }
-
-    if (token && userParam) {
-      try {
-        console.log('🔓 이메일 사용자 자동 인증 시작')
-        
-        const userData = JSON.parse(decodeURIComponent(userParam))
-        
-        // 인증 정보 저장
-        localStorage.setItem('authToken', token)
-        localStorage.setItem('currentUser', JSON.stringify(userData))
-        
-        setCurrentUser(userData)
-        
-        console.log('✅ 이메일 사용자 인증 성공:', userData.email)
-        
-        // URL 정리
-        const newUrl = new URL(window.location.href)
-        newUrl.searchParams.delete('token')
-        newUrl.searchParams.delete('user')
-        
-        window.history.replaceState({}, '', newUrl.toString())
-        
-      } catch (error) {
-        console.error('❌ 이메일 사용자 인증 실패:', error)
-        setError('인증 정보 처리 중 오류가 발생했습니다.')
-      }
-    } else {
-      // 토큰이 없으면 기존 저장된 정보 확인
-      try {
-        const savedUser = localStorage.getItem('currentUser')
-        const savedToken = localStorage.getItem('authToken')
-        
-        if (savedUser && savedToken) {
-          const userData = JSON.parse(savedUser)
-          setCurrentUser(userData)
-          console.log('💾 저장된 사용자 정보 사용:', userData.email)
-        }
-      } catch (error) {
-        console.error('저장된 인증 정보 확인 실패:', error)
-      }
-    }
-  }, [router.query])
-
-  // 업무 목록 및 통계 조회
-  useEffect(() => {
-    if (currentUser) {
-      loadTasksAndStats()
-    }
-  }, [currentUser])
-
-  const loadTasksAndStats = async () => {
-    if (!currentUser) return
-
-    setLoading(true)
-    try {
-      const token = localStorage.getItem('authToken')
-      
-      // 업무 목록 조회
-      const tasksResponse = await fetch('/api/tasks', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (tasksResponse.ok) {
-        const tasksData: ApiResponse<Task[]> = await tasksResponse.json()
-        if (tasksData.success && tasksData.data) {
-          setTasks(tasksData.data)
-        }
-      }
-
-      // 통계 조회
-      const statsResponse = await fetch('/api/completions/today-stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (statsResponse.ok) {
-        const statsData: ApiResponse<DashboardStats> = await statsResponse.json()
-        if (statsData.success && statsData.data) {
-          setStats(statsData.data)
-        }
-      }
-
-    } catch (error) {
-      console.error('데이터 로드 실패:', error)
-      setError('데이터를 불러오는 중 오류가 발생했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }
+export default function EmailDashboard({ 
+  user, 
+  message, 
+  tasks, 
+  stats,
+  error 
+}: EmailDashboardProps) {
+  // 완전히 정적인 페이지 - 클라이언트 자바스크립트 최소화
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('ko-KR')
@@ -150,29 +43,6 @@ export default function EmailDashboard() {
     if (diffDays === 0) return 'D-Day'
     if (diffDays > 0) return `D-${diffDays}`
     return `D+${Math.abs(diffDays)}`
-  }
-
-  if (loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-      }}>
-        <div style={{
-          background: 'white',
-          borderRadius: '15px',
-          padding: '40px',
-          textAlign: 'center',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
-          <h2>데이터를 불러오는 중...</h2>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -219,38 +89,40 @@ export default function EmailDashboard() {
                   color: '#666',
                   fontSize: '16px'
                 }}>
-                  {currentUser ? `안녕하세요, ${currentUser.name}님!` : '업무 관리 시스템'}
+                  {user ? `안녕하세요, ${user.name}님!` : '업무 관리 시스템'}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={() => router.push('/dashboard')}
+                <a 
+                  href="/dashboard"
                   style={{
                     background: '#007bff',
                     color: 'white',
                     border: 'none',
                     padding: '10px 20px',
                     borderRadius: '20px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    textDecoration: 'none',
+                    display: 'inline-block'
                   }}
                 >
                   📋 전체 대시보드
-                </button>
-                <button
-                  onClick={() => router.push('/login')}
+                </a>
+                <a 
+                  href="/login"
                   style={{
                     background: '#6c757d',
                     color: 'white',
                     border: 'none',
                     padding: '10px 20px',
                     borderRadius: '20px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    textDecoration: 'none',
+                    display: 'inline-block'
                   }}
                 >
                   🔑 로그인
-                </button>
+                </a>
               </div>
             </div>
             
@@ -459,4 +331,98 @@ export default function EmailDashboard() {
       </div>
     </>
   )
+}
+
+export const getServerSideProps: GetServerSideProps = async ({ query }) => {
+  const { token, user: userParam, message } = query
+
+  console.log('=== 이메일 대시보드 서버사이드 처리 ===')
+  console.log('Query 파라미터:', { hasToken: !!token, hasUser: !!userParam, message })
+
+  let user: User | null = null
+  let tasks: Task[] = []
+  let stats: DashboardStats = {
+    total_tasks: 0,
+    completed_today: 0,
+    overdue_tasks: 0,
+    pending_tasks: 0,
+    completion_rate: 0,
+    today_tasks: 0,
+    today_completion_rate: 0
+  }
+  let error: string | null = null
+
+  // 사용자 정보 처리
+  if (userParam && typeof userParam === 'string') {
+    try {
+      user = JSON.parse(decodeURIComponent(userParam))
+      console.log('✅ 사용자 정보 파싱 성공:', user?.email)
+    } catch (parseError) {
+      console.error('❌ 사용자 정보 파싱 실패:', parseError)
+      error = '사용자 정보 처리 중 오류가 발생했습니다.'
+    }
+  }
+
+  // 데이터 로드 (사용자가 있는 경우)
+  if (user) {
+    try {
+      // 업무 목록 조회
+      const { data: tasksData, error: tasksError } = await (supabaseAdmin as any)
+        .from('tasks')
+        .select('*')
+        .or(`assignee.eq.${user.email},assignee.eq.all`)
+        .order('due_date', { ascending: true })
+
+      if (tasksError) {
+        console.error('업무 목록 조회 실패:', tasksError)
+      } else if (tasksData) {
+        tasks = tasksData
+        console.log(`📋 업무 목록 로드: ${tasks.length}개`)
+      }
+
+      // 통계 계산
+      const today = new Date().toISOString().split('T')[0]
+      const totalTasks = tasks.length
+      const completedToday = tasks.filter(task => 
+        task.completed && 
+        task.updated_at && 
+        task.updated_at.split('T')[0] === today
+      ).length
+      const overdueTasks = tasks.filter(task => 
+        !task.completed && 
+        task.due_date < today
+      ).length
+      const pendingTasks = tasks.filter(task => !task.completed).length
+      const completionRate = totalTasks > 0 ? (totalTasks - pendingTasks) / totalTasks * 100 : 0
+
+      stats = {
+        total_tasks: totalTasks,
+        completed_today: completedToday,
+        overdue_tasks: overdueTasks,
+        pending_tasks: pendingTasks,
+        completion_rate: completionRate,
+        today_tasks: tasks.filter(task => 
+          !task.completed && 
+          task.due_date === today
+        ).length,
+        today_completion_rate: 0
+      }
+
+      console.log('📊 통계 계산 완료:', stats)
+
+    } catch (dataError) {
+      console.error('❌ 데이터 로드 오류:', dataError)
+      error = '데이터를 불러오는 중 오류가 발생했습니다.'
+    }
+  }
+
+  return {
+    props: {
+      user: user || null,
+      message: message ? decodeURIComponent(message as string) : null,
+      tasks,
+      stats,
+      error
+    }
+  }
 }
