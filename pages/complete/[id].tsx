@@ -199,14 +199,10 @@ export const getServerSideProps: GetServerSideProps = async ({ query }) => {
     // 3단계: 업무 완료 처리
     if (task.completed && task.frequency === 'once') {
       return {
-        props: {
-          success: true,
-          message: '이미 완료된 업무입니다.',
-          taskTitle: task.title,
-          taskId: id,
-          userEmail: completedBy,
-          redirectUrl: `/email-dashboard?message=${encodeURIComponent('이미 완료된 업무입니다.')}`
-        }
+        redirect: {
+          destination: `/email-dashboard?message=${encodeURIComponent('이미 완료된 업무입니다.')}`,
+          permanent: false,
+        },
       }
     }
 
@@ -283,42 +279,34 @@ export const getServerSideProps: GetServerSideProps = async ({ query }) => {
       if (createError) {
         console.error('사용자 생성 실패:', createError)
         return {
-          props: {
-            success: true,
-            message: '업무가 완료되었습니다. 로그인이 필요합니다.',
-            taskTitle: task.title,
-            taskId: id,
-            userEmail: completedBy
-          }
+          redirect: {
+            destination: `/login?redirect=${encodeURIComponent('/dashboard')}&message=${encodeURIComponent('업무가 완료되었습니다. 계정 생성 실패로 로그인이 필요합니다.')}&email=${encodeURIComponent(completedBy)}`,
+            permanent: false,
+          },
         }
       }
       user = newUser
     }
 
     if (!user) {
+      // 사용자가 없는 경우 로그인 페이지로 리다이렉트
       return {
-        props: {
-          success: true,
-          message: '업무가 완료되었습니다. 로그인이 필요합니다.',
-          taskTitle: task.title,
-          taskId: id,
-          userEmail: completedBy
-        }
+        redirect: {
+          destination: `/login?redirect=${encodeURIComponent('/dashboard')}&message=${encodeURIComponent('업무가 완료되었습니다. 로그인 후 대시보드에서 확인하세요.')}&email=${encodeURIComponent(completedBy)}`,
+          permanent: false,
+        },
       }
     }
 
-    // 토큰 생성 후 쿠키로 설정
+    // 토큰 생성 - 이메일 대시보드로 직접 리다이렉트
     const sessionToken = generateToken(user)
     
+    // CSP 우회를 위한 서버사이드 리다이렉트
     return {
-      props: {
-        success: true,
-        message: '업무가 성공적으로 완료되었습니다!',
-        taskTitle: task.title,
-        taskId: id,
-        userEmail: completedBy,
-        redirectUrl: `/email-dashboard?token=${encodeURIComponent(sessionToken)}&user=${encodeURIComponent(JSON.stringify(user))}&message=${encodeURIComponent('업무가 완료되었습니다!')}`
-      }
+      redirect: {
+        destination: `/email-dashboard?token=${encodeURIComponent(sessionToken)}&user=${encodeURIComponent(JSON.stringify(user))}&message=${encodeURIComponent('업무가 완료되었습니다!')}`,
+        permanent: false,
+      },
     }
 
   } catch (error) {
