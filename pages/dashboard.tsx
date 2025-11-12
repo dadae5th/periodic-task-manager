@@ -84,151 +84,57 @@ export default function Dashboard() {
     due_date: new Date().toISOString().split('T')[0]
   })
 
-  // 사용자 인증 체크 (auto_login 처리 포함)
+  // 간소화된 사용자 인증 체크
   useEffect(() => {
+    console.log('🔍 사용자 인증 체크 시작')
+    
+    // URL 파라미터 확인
     const urlParams = new URLSearchParams(window.location.search)
-    const autoLogin = urlParams.get('auto_login')
-    const autoComplete = urlParams.get('auto_complete')
-    const emailComplete = urlParams.get('email_complete')
-    const token = urlParams.get('token')
-    const userParam = urlParams.get('user')
-    const message = urlParams.get('message')
+    const skipAuth = urlParams.get('skip_auth') === 'true'
     
-    // 이메일 완료 후 쿠키를 통한 자동 로그인 (CSP 우회)
-    if (emailComplete === 'true') {
-      try {
-        console.log('🍪 쿠키를 통한 이메일 완료 인증 처리')
-        
-        // 쿠키에서 인증 정보 읽기
-        const cookieToken = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('authToken='))
-          ?.split('=')[1]
-        
-        const cookieUser = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('currentUser='))
-          ?.split('=')[1]
-        
-        if (cookieToken && cookieUser) {
-          const userData = JSON.parse(decodeURIComponent(cookieUser))
-          
-          // localStorage에 저장
-          localStorage.setItem('authToken', cookieToken)
-          localStorage.setItem('currentUser', JSON.stringify(userData))
-          
-          setCurrentUser(userData)
-          setNewTask(prev => ({ ...prev, assignee: userData.email }))
-          
-          console.log('✅ 쿠키 인증 성공:', userData.email)
-          
-          // URL 정리
-          const newUrl = new URL(window.location.href)
-          newUrl.searchParams.delete('email_complete')
-          if (!message) newUrl.searchParams.delete('message')
-          window.history.replaceState({}, '', newUrl.toString())
-          
-          return
-        }
-      } catch (error) {
-        console.error('❌ 쿠키 인증 실패:', error)
+    if (skipAuth) {
+      console.log('⚡ 인증 우회 모드')
+      // 테스트 사용자 설정
+      const testUser: User = {
+        id: 'test-user-1',
+        email: 'bae.jae.kwon@drbworld.com',
+        name: '배재권',
+        role: 'admin' as const,
+        created_at: new Date().toISOString()
       }
+      setCurrentUser(testUser)
+      setNewTask(prev => ({ ...prev, assignee: testUser.email }))
+      
+      // URL 정리
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('skip_auth')
+      window.history.replaceState({}, '', newUrl.toString())
+      return
     }
     
-    // 서버사이드 완료 페이지에서 온 auto_complete 처리
-    if (autoComplete === 'true' && token && userParam) {
-      try {
-        console.log('🎊 서버사이드 완료 후 자동 로그인 처리')
-        
-        const userData = JSON.parse(userParam)
-        localStorage.setItem('authToken', token)
-        localStorage.setItem('currentUser', JSON.stringify(userData))
-        
-        setCurrentUser(userData)
-        setNewTask(prev => ({ ...prev, assignee: userData.email }))
-        
-        // URL 정리
-        const newUrl = new URL(window.location.href)
-        newUrl.searchParams.delete('auto_complete')
-        newUrl.searchParams.delete('token')
-        newUrl.searchParams.delete('user')
-        if (!message) newUrl.searchParams.delete('message')
-        
-        window.history.replaceState({}, '', newUrl.toString())
-        
-        console.log('✅ 서버사이드 완료 인증 성공')
-        return
-      } catch (error) {
-        console.error('❌ 서버사이드 완료 인증 실패:', error)
-      }
-    }
-
-    // 이메일에서 온 auto_login 처리 (URL 파라미터) - 백업
-    if (autoLogin === 'true' && token && userParam) {
-      try {
-        console.log('🚀 대시보드 자동 로그인 처리 시작')
-        console.log('📝 받은 파라미터:', { 
-          autoLogin, 
-          hasToken: !!token, 
-          hasUserParam: !!userParam,
-          tokenLength: token?.length || 0,
-          userParamLength: userParam?.length || 0
-        })
-        
-        // 사용자 정보 파싱
-        const userData = JSON.parse(userParam)
-        console.log('👤 사용자 데이터 파싱 성공:', {
-          email: userData.email,
-          name: userData.name,
-          role: userData.role
-        })
-        
-        // localStorage에 저장
-        localStorage.setItem('authToken', token)
-        localStorage.setItem('currentUser', JSON.stringify(userData))
-        console.log('💾 localStorage 저장 완료')
-        
-        // 상태 설정
-        setCurrentUser(userData)
-        setNewTask(prev => ({ ...prev, assignee: userData.email }))
-        
-        // URL 정리
-        const newUrl = new URL(window.location.href)
-        newUrl.searchParams.delete('auto_login')
-        newUrl.searchParams.delete('token')
-        newUrl.searchParams.delete('user')
-        if (!message) newUrl.searchParams.delete('message')
-        
-        window.history.replaceState({}, '', newUrl.toString())
-        
-        console.log('✅ 자동 로그인 완료 - 로그인 체크 건너뛰기')
-        return
-      } catch (error) {
-        console.error('❌ 자동 로그인 실패:', error)
-        console.error('❌ 실패 상세:', {
-          message: error instanceof Error ? error.message : String(error),
-          token: token?.substring(0, 20) + '...',
-          userParam: userParam?.substring(0, 100) + '...'
-        })
-        // 자동 로그인 실패 시 일반 인증 체크로 진행
-      }
-    }
-    
-    // 일반적인 사용자 인증 체크
-    console.log('🔍 일반 사용자 인증 체크 시작')
+    // 간단한 인증 체크
     const user = getCurrentUser()
     
     if (!user) {
-      console.log('❌ 사용자 정보 없음 - 로그인 페이지로 이동')
+      console.log('❌ 사용자 정보 없음')
       console.log('🔄 localStorage 상태:', {
         hasToken: !!localStorage.getItem('authToken'),
         hasUser: !!localStorage.getItem('currentUser')
       })
-      router.push('/login')
+      
+      // 5초 후에도 사용자 정보가 없으면 간단 로그인으로 이동
+      setTimeout(() => {
+        const currentUser = getCurrentUser()
+        if (!currentUser) {
+          console.log('🔄 간단 로그인 페이지로 이동')
+          router.push('/simple-login')
+        }
+      }, 5000)
+      
       return
     }
     
-    console.log('✅ 일반 인증 성공:', { email: user.email, name: user.name })
+    console.log('✅ 인증 성공:', { email: user.email, name: user.name })
     setCurrentUser(user)
     setNewTask(prev => ({ ...prev, assignee: user.email }))
   }, [router])

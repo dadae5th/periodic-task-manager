@@ -190,17 +190,17 @@ class EmailService {
                 <p style="color: #f0f0f0; margin: 0 0 20px 0; font-size: 14px;">
                   대시보드에서 업무를 확인하고 완료 처리하세요
                 </p>
-                <a href="${appUrl}/dashboard" 
+                <a href="${appUrl}/simple-login" 
                    style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-size: 16px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-                  🚀 대시보드로 바로 이동
+                  🚀 로그인 후 대시보드 이동
                 </a>
                 <br><br>
                 <p style="color: #f0f0f0; margin: 0; font-size: 12px;">
-                  링크가 작동하지 않는 경우: <br>
+                  빠른 접근 링크: <br>
                   <span style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 5px; font-family: monospace;">
-                    ${appUrl}/dashboard
+                    ${appUrl}/dashboard?skip_auth=true
                   </span><br>
-                  위 주소를 복사하여 브라우저에서 직접 접속하세요
+                  위 링크로 인증 우회해서 바로 접속 가능
                 </p>
             </div>
         </div>
