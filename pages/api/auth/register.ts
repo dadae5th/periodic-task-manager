@@ -123,13 +123,34 @@ export default async function handler(
       exp: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7일
     })).toString('base64')
 
+    // 환영 이메일 발송
+    try {
+      const { getEmailService } = await import('@/lib/email')
+      const emailService = getEmailService()
+      
+      console.log(`신규 회원 ${email}에게 환영 이메일 발송 시작`)
+      
+      // 환영 이메일 발송 (빈 업무 목록으로)
+      await emailService.sendDailyTaskEmail(
+        email,
+        [], // 오늘 업무 없음
+        []  // 지연 업무 없음
+      )
+      
+      console.log(`✅ ${email} 환영 이메일 발송 완료`)
+    } catch (emailError) {
+      console.error('환영 이메일 발송 실패:', emailError)
+      // 이메일 발송 실패는 회원가입을 실패로 처리하지 않음
+    }
+
     // 사용자 정보 반환 (password 필드는 없음)
     const userInfo = newUser
 
     return res.status(201).json(
       createApiResponse(true, {
         user: userInfo,
-        token
+        token,
+        message: '회원가입 성공! 개인 대시보드 링크가 포함된 환영 이메일을 확인하세요.'
       }, '회원가입 성공')
     )
 

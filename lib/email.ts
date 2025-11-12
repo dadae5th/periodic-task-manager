@@ -149,10 +149,17 @@ class EmailService {
       
       tasksList += '</div>'
     } else if (overdueTasks.length === 0) {
+      // 업무가 전혀 없는 경우 (신규 회원일 가능성)
       tasksList += `
         <div style="text-align: center; padding: 40px; background: #e8f5e8; border-radius: 10px;">
-          <h3 style="color: #28a745;">🎉 오늘 할 일이 없습니다!</h3>
-          <p style="color: #666;">모든 업무를 완료했거나 예정된 업무가 없습니다.</p>
+          <h3 style="color: #28a745;">🎉 환영합니다!</h3>
+          <p style="color: #666; margin-bottom: 15px;">
+            ${recipient}님만의 개인 업무 관리 대시보드가 준비되었습니다.
+          </p>
+          <p style="color: #888; font-size: 14px;">
+            현재 할당된 업무가 없습니다. 관리자가 업무를 할당하거나<br>
+            직접 대시보드에서 업무를 생성할 수 있습니다.
+          </p>
         </div>
       `
     }
