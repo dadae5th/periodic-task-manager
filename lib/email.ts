@@ -186,19 +186,19 @@ class EmailService {
             ${tasksList}
             
             <div style="text-align: center; margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px;">
-                <h3 style="color: white; margin: 0 0 15px 0;">📋 업무 관리하기</h3>
+                <h3 style="color: white; margin: 0 0 15px 0;">📋 ${recipient}님의 개인 업무 대시보드</h3>
                 <p style="color: #f0f0f0; margin: 0 0 20px 0; font-size: 14px;">
-                  대시보드에서 업무를 확인하고 완료 처리하세요
+                  귀하만의 개별 업무를 확인하고 완료 처리하세요
                 </p>
-                <a href="${appUrl}/dashboard" 
+                <a href="${appUrl}/dashboard?user=${encodeURIComponent(recipient)}&auto_login=true" 
                    style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-size: 16px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-                  🚀 대시보드 바로 이동
+                  🚀 ${recipient.split('@')[0]}님 전용 대시보드
                 </a>
                 <br><br>
                 <p style="color: #f0f0f0; margin: 0; font-size: 12px;">
-                  문제가 있다면 아래 링크 직접 접속: <br>
+                  개인 업무만 표시됩니다 | 사용자: ${recipient}<br>
                   <span style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 5px; font-family: monospace;">
-                    ${appUrl}/dashboard
+                    ${appUrl}/dashboard?user=${encodeURIComponent(recipient)}
                   </span>
                 </p>
             </div>

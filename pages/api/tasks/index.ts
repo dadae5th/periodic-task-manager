@@ -41,18 +41,24 @@ async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // 인증 우회를 위한 기본 사용자 설정
-  const defaultUser = {
-    id: 'default-user',
-    email: 'bae.jae.kwon@drbworld.com',
-    name: '배재권',
-    role: 'admin' as const,
+  // URL이나 헤더에서 사용자 정보 추출
+  const userEmail = req.headers['x-user-email'] as string || req.query.user as string || 'bae.jae.kwon@drbworld.com'
+  
+  // 동적 사용자 설정
+  const isAdmin = userEmail === 'bae.jae.kwon@drbworld.com'
+  const dynamicUser = {
+    id: `user-${userEmail.replace(/[^a-zA-Z0-9]/g, '-')}`,
+    email: userEmail,
+    name: userEmail.split('@')[0],
+    role: isAdmin ? 'admin' as const : 'user' as const,
     created_at: new Date().toISOString()
   }
   
+  console.log('🔍 API 사용자 설정:', dynamicUser)
+  
   // req에 사용자 정보 추가
   const authReq = req as AuthenticatedRequest
-  authReq.user = defaultUser
+  authReq.user = dynamicUser
   
   if (req.method === 'GET') {
     return handleGetTasks(authReq, res)

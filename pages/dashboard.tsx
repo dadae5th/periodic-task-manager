@@ -84,27 +84,58 @@ export default function Dashboard() {
     due_date: new Date().toISOString().split('T')[0]
   })
 
-  // 매우 간단한 인증 체크
+  // 사용자별 개별 대시보드 설정
   useEffect(() => {
-    console.log('🔍 대시보드 진입')
+    console.log('🔍 개별 대시보드 진입')
     
-    // 항상 기본 사용자로 설정 (인증 완전 우회)
-    const defaultUser: User = {
-      id: 'default-user',
-      email: 'bae.jae.kwon@drbworld.com',
-      name: '배재권',
-      role: 'admin' as const,
-      created_at: new Date().toISOString()
+    // URL 파라미터에서 사용자 정보 확인
+    const urlParams = new URLSearchParams(window.location.search)
+    const userParam = urlParams.get('user')
+    const autoLogin = urlParams.get('auto_login')
+    
+    let targetUser: User
+    
+    if (userParam && autoLogin === 'true') {
+      // 이메일에서 온 경우 - 해당 사용자로 설정
+      console.log('📧 이메일에서 접근:', userParam)
+      targetUser = {
+        id: `user-${userParam.replace(/[^a-zA-Z0-9]/g, '-')}`,
+        email: userParam,
+        name: userParam.split('@')[0],
+        role: 'user' as const,
+        created_at: new Date().toISOString()
+      }
+      
+      // 관리자 이메일인 경우 관리자 권한 부여
+      if (userParam === 'bae.jae.kwon@drbworld.com') {
+        targetUser.role = 'admin'
+        targetUser.name = '배재권'
+      }
+    } else {
+      // 직접 접근한 경우 - 기본 관리자로 설정
+      console.log('🔐 직접 접근 - 기본 관리자 설정')
+      targetUser = {
+        id: 'default-admin',
+        email: 'bae.jae.kwon@drbworld.com',
+        name: '배재권',
+        role: 'admin' as const,
+        created_at: new Date().toISOString()
+      }
     }
     
-    console.log('✅ 기본 사용자 설정:', defaultUser.email)
-    setCurrentUser(defaultUser)
-    setNewTask(prev => ({ ...prev, assignee: defaultUser.email }))
+    console.log('✅ 사용자 설정:', {
+      email: targetUser.email,
+      name: targetUser.name,
+      role: targetUser.role
+    })
     
-    // URL 정리
-    const currentUrl = new URL(window.location.href)
-    if (currentUrl.search) {
-      currentUrl.search = ''
+    setCurrentUser(targetUser)
+    setNewTask(prev => ({ ...prev, assignee: targetUser.email }))
+    
+    // URL 정리 (auto_login 파라미터만 제거, user는 유지)
+    if (autoLogin) {
+      const currentUrl = new URL(window.location.href)
+      currentUrl.searchParams.delete('auto_login')
       window.history.replaceState({}, '', currentUrl.toString())
     }
   }, [])
@@ -166,10 +197,17 @@ export default function Dashboard() {
     setLoading(true)
     setError(null)
     try {
-      console.log('Fetching tasks from API...')
+      console.log('Fetching tasks from API for user:', currentUser?.email)
+      
+      // 사용자별 API 호출 헤더 생성
+      const userHeaders = {
+        ...getAuthHeaders(),
+        'X-User-Email': currentUser?.email || 'bae.jae.kwon@drbworld.com'
+      }
+      
       const tasksResponse = await fetch('/api/tasks', {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: userHeaders,
       })
       
       console.log('API Response status:', tasksResponse.status)
@@ -188,13 +226,13 @@ export default function Dashboard() {
         // 통계 계산을 위해 완료 기록도 가져오기
         const completionsResponse = await fetch('/api/completions/today', {
           method: 'GET',
-          headers: getAuthHeaders(),
+          headers: userHeaders,
         })
         
         // 오늘 업무 통계 가져오기
         const todayStatsResponse = await fetch('/api/completions/today-stats', {
           method: 'GET',
-          headers: getAuthHeaders(),
+          headers: userHeaders,
         })
         
         let completedToday = 0
