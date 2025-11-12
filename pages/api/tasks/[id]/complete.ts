@@ -266,14 +266,16 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
       const sessionToken = generateToken(user)
       console.log('✅ 토큰 생성 성공')
 
-      // URL에 토큰을 포함하여 완료 페이지로 리다이렉트
-      const redirectUrl = `${appUrl}/task-complete?token=${encodeURIComponent(sessionToken)}&task=${id}&user=${encodeURIComponent(user.email)}&message=${encodeURIComponent('업무가 완료되었습니다!')}`
-      console.log('✅ 자동 로그인 성공, 리디렉션:', redirectUrl)
-      return res.redirect(302, redirectUrl)
+      // 토큰과 사용자 정보를 URL에 포함하여 대시보드로 바로 이동
+      const dashboardUrl = `${appUrl}/dashboard?auto_login=true&token=${encodeURIComponent(sessionToken)}&user=${encodeURIComponent(JSON.stringify(user))}&message=${encodeURIComponent('업무가 완료되었습니다!')}&completed_task=${id}`
+      
+      console.log('✅ 대시보드로 직접 리다이렉트:', dashboardUrl)
+      return res.redirect(302, dashboardUrl)
 
     } catch (error) {
       console.error('❌ 자동 로그인 처리 오류:', error)
-      return res.redirect(302, `${appUrl}/login?message=${encodeURIComponent('업무를 완료하려면 로그인해주세요.')}&email=${encodeURIComponent(completed_by_final)}&redirect=${encodeURIComponent(`/api/tasks/${id}/complete`)}`)
+      // 자동 로그인 실패시에도 업무는 이미 완료된 상태이므로 대시보드로 이동
+      return res.redirect(302, `${appUrl}/dashboard?message=${encodeURIComponent('업무가 완료되었습니다. 로그인이 필요합니다.')}&completed_task=${id}`)
     }
   } catch (error) {
     console.error('업무 완료 처리 중 오류:', error)

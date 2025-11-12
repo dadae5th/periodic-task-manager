@@ -84,8 +84,44 @@ export default function Dashboard() {
     due_date: new Date().toISOString().split('T')[0]
   })
 
-  // 사용자 인증 체크
+  // 사용자 인증 체크 (auto_login 처리 포함)
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const autoLogin = urlParams.get('auto_login')
+    const token = urlParams.get('token')
+    const userParam = urlParams.get('user')
+    const message = urlParams.get('message')
+    
+    // 이메일에서 온 auto_login 처리
+    if (autoLogin === 'true' && token && userParam) {
+      try {
+        console.log('🚀 대시보드 자동 로그인 처리:', { token, userParam })
+        
+        // 토큰과 사용자 정보를 localStorage에 저장
+        const userData = JSON.parse(userParam)
+        localStorage.setItem('authToken', token)
+        localStorage.setItem('currentUser', JSON.stringify(userData))
+        
+        setCurrentUser(userData)
+        setNewTask(prev => ({ ...prev, assignee: userData.email }))
+        
+        // URL에서 auto_login 파라미터 제거
+        const newUrl = new URL(window.location.href)
+        newUrl.searchParams.delete('auto_login')
+        newUrl.searchParams.delete('token')
+        newUrl.searchParams.delete('user')
+        if (!message) newUrl.searchParams.delete('message')
+        
+        window.history.replaceState({}, '', newUrl.toString())
+        
+        console.log('✅ 자동 로그인 성공')
+        return
+      } catch (error) {
+        console.error('❌ 자동 로그인 실패:', error)
+      }
+    }
+    
+    // 일반적인 사용자 인증 체크
     const user = getCurrentUser()
     if (!user) {
       router.push('/login')
