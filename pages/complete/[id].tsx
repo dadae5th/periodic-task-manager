@@ -205,7 +205,7 @@ export const getServerSideProps: GetServerSideProps = async ({ query }) => {
           taskTitle: task.title,
           taskId: id,
           userEmail: completedBy,
-          redirectUrl: '/dashboard'
+          redirectUrl: `/email-dashboard?message=${encodeURIComponent('이미 완료된 업무입니다.')}`
         }
       }
     }
@@ -317,7 +317,7 @@ export const getServerSideProps: GetServerSideProps = async ({ query }) => {
         taskTitle: task.title,
         taskId: id,
         userEmail: completedBy,
-        redirectUrl: `/dashboard?auto_complete=true&token=${encodeURIComponent(sessionToken)}&user=${encodeURIComponent(JSON.stringify(user))}`
+        redirectUrl: `/email-dashboard?token=${encodeURIComponent(sessionToken)}&user=${encodeURIComponent(JSON.stringify(user))}&message=${encodeURIComponent('업무가 완료되었습니다!')}`
       }
     }
 

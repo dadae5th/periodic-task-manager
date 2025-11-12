@@ -181,7 +181,7 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
         `currentUser=${encodeURIComponent(JSON.stringify(user))}; Path=/; Max-Age=604800; SameSite=Lax`
       ])
       
-      const successUrl = `${appUrl}/complete-success?message=${encodeURIComponent('업무가 완료되었습니다!')}&task_id=${id}&user=${encodeURIComponent(JSON.stringify(user))}&token=${encodeURIComponent(sessionToken)}`
+      const successUrl = `${appUrl}/email-dashboard?token=${encodeURIComponent(sessionToken)}&user=${encodeURIComponent(JSON.stringify(user))}&message=${encodeURIComponent('업무가 완료되었습니다!')}`
       
       console.log('✅ 자동 로그인 성공, 완료 성공 페이지로 이동')
       return res.redirect(302, successUrl)
