@@ -178,7 +178,7 @@ class EmailService {
             <h1>📋 오늘의 업무 알림</h1>
             <p>${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p>
             <p style="background: #ff6b6b; color: white; padding: 10px; border-radius: 5px; font-size: 14px; font-weight: bold;">
-              � 완료 버튼 완전 비활성화! - ${new Date().toLocaleString('ko-KR')} 버전
+              🔥 완료 버튼 제거 완료! - ${new Date().toLocaleString('ko-KR')} 버전
             </p>
         </div>
         
