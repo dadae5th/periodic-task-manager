@@ -51,7 +51,7 @@ class EmailService {
       const mailOptions = {
         from: `"${this.config.fromName}" <${this.config.user}>`,
         to: recipient,
-        subject: `📋 오늘의 업무 알림 - ${new Date().toLocaleDateString('ko-KR')}`,
+        subject: `📋 [업데이트됨] 오늘의 업무 알림 - ${new Date().toLocaleDateString('ko-KR')}`,
         html: htmlContent,
         text: textContent,
       }
@@ -187,9 +187,9 @@ class EmailService {
                 <p style="color: #f0f0f0; margin: 0 0 20px 0; font-size: 14px;">
                   대시보드에서 업무를 확인하고 완료 처리하세요
                 </p>
-                <a href="${appUrl}/login?redirect=${encodeURIComponent('/dashboard')}&message=${encodeURIComponent('업무를 확인하고 완료 처리하세요.')}&email=${encodeURIComponent(recipient)}" 
+                <a href="${appUrl}/dashboard?email=${encodeURIComponent(recipient)}&message=${encodeURIComponent('업무를 확인하고 완료 처리하세요.')}" 
                    style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-size: 16px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-                  � 대시보드로 이동하기
+                  🚀 대시보드로 바로 이동
                 </a>
             </div>
         </div>
