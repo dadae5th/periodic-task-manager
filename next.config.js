@@ -13,7 +13,7 @@ const nextConfig = {
   // 빌드 최적화
   compress: true,
   poweredByHeader: false,
-  // 보안 헤더
+  // 보안 헤더 (CSP 임시 비활성화)
   async headers() {
     return [
       {
@@ -31,10 +31,11 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
-          {
-            key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://periodic-task-manager.vercel.app https://*.vercel.app; object-src 'none'; base-uri 'self'; form-action 'self';"
-          },
+          // CSP 완전 제거 - 이메일 자동 로그인 문제 해결을 위해
+          // {
+          //   key: 'Content-Security-Policy',
+          //   value: "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: *; script-src 'self' 'unsafe-inline' 'unsafe-eval' *; style-src 'self' 'unsafe-inline' *; img-src 'self' data: https: *; font-src 'self' data: https: *; connect-src 'self' https: wss: *; object-src 'none'; base-uri 'self'; form-action 'self' *; frame-ancestors 'none';"
+          // },
         ],
       },
     ]

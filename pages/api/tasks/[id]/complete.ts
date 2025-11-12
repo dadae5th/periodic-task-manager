@@ -172,19 +172,19 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
         return res.redirect(302, `${appUrl}/dashboard?message=${encodeURIComponent('업무가 완료되었습니다. 로그인해주세요.')}`)
       }
 
-      // 토큰 생성 및 쿠키 설정으로 CSP 우회
+      // 토큰 생성
       const sessionToken = generateToken(user)
       
-      // 쿠키를 통한 인증 정보 전달 (CSP 문제 우회)
+      // CSP 우회: 완료 성공 페이지로 이동 (쿠키 + URL 파라미터)
       res.setHeader('Set-Cookie', [
         `authToken=${sessionToken}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`,
         `currentUser=${encodeURIComponent(JSON.stringify(user))}; Path=/; Max-Age=604800; SameSite=Lax`
       ])
       
-      const dashboardUrl = `${appUrl}/dashboard?email_complete=true&message=${encodeURIComponent('업무가 완료되었습니다!')}`
+      const successUrl = `${appUrl}/complete-success?message=${encodeURIComponent('업무가 완료되었습니다!')}&task_id=${id}&user=${encodeURIComponent(JSON.stringify(user))}&token=${encodeURIComponent(sessionToken)}`
       
-      console.log('✅ 자동 로그인 성공, 쿠키 설정 후 대시보드로 이동')
-      return res.redirect(302, dashboardUrl)
+      console.log('✅ 자동 로그인 성공, 완료 성공 페이지로 이동')
+      return res.redirect(302, successUrl)
 
     } catch (error) {
       console.error('❌ 자동 로그인 오류:', error)

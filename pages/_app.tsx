@@ -9,7 +9,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>주기별 업무 관리 시스템</title>
-        <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://periodic-task-manager.vercel.app https://*.vercel.app; object-src 'none';" />
+        {/* CSP 메타 태그 제거 - 이메일 자동 로그인 문제 해결을 위해 */}
       </Head>
       <Component {...pageProps} />
     </>
