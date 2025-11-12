@@ -88,11 +88,53 @@ export default function Dashboard() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const autoLogin = urlParams.get('auto_login')
+    const emailComplete = urlParams.get('email_complete')
     const token = urlParams.get('token')
     const userParam = urlParams.get('user')
     const message = urlParams.get('message')
     
-    // 이메일에서 온 auto_login 처리
+    // 이메일 완료 후 쿠키를 통한 자동 로그인 (CSP 우회)
+    if (emailComplete === 'true') {
+      try {
+        console.log('🍪 쿠키를 통한 이메일 완료 인증 처리')
+        
+        // 쿠키에서 인증 정보 읽기
+        const cookieToken = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('authToken='))
+          ?.split('=')[1]
+        
+        const cookieUser = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('currentUser='))
+          ?.split('=')[1]
+        
+        if (cookieToken && cookieUser) {
+          const userData = JSON.parse(decodeURIComponent(cookieUser))
+          
+          // localStorage에 저장
+          localStorage.setItem('authToken', cookieToken)
+          localStorage.setItem('currentUser', JSON.stringify(userData))
+          
+          setCurrentUser(userData)
+          setNewTask(prev => ({ ...prev, assignee: userData.email }))
+          
+          console.log('✅ 쿠키 인증 성공:', userData.email)
+          
+          // URL 정리
+          const newUrl = new URL(window.location.href)
+          newUrl.searchParams.delete('email_complete')
+          if (!message) newUrl.searchParams.delete('message')
+          window.history.replaceState({}, '', newUrl.toString())
+          
+          return
+        }
+      } catch (error) {
+        console.error('❌ 쿠키 인증 실패:', error)
+      }
+    }
+    
+    // 이메일에서 온 auto_login 처리 (URL 파라미터)
     if (autoLogin === 'true' && token && userParam) {
       try {
         console.log('🚀 대시보드 자동 로그인 처리 시작')
