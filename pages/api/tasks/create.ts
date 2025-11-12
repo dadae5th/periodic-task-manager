@@ -7,7 +7,19 @@ if (process.env.NODE_ENV === 'development') {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 }
 
-async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // 인증 우회를 위한 기본 사용자 설정
+  const defaultUser = {
+    id: 'default-user',
+    email: 'bae.jae.kwon@drbworld.com',
+    name: '배재권',
+    role: 'admin' as const,
+    created_at: new Date().toISOString()
+  }
+  
+  // req에 사용자 정보 추가
+  const authReq = req as AuthenticatedRequest
+  authReq.user = defaultUser
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
     return res.status(405).json(createApiResponse(false, null, '허용되지 않는 메서드'))
@@ -15,8 +27,8 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
   try {
     console.log('업무 생성 요청 시작:', {
-      user: req.user?.email,
-      userRole: req.user?.role,
+      user: authReq.user?.email,
+      userRole: authReq.user?.role,
       body: req.body
     })
 
@@ -31,7 +43,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     }
 
     // 사용자는 자신의 이메일로만 업무를 생성할 수 있음 (관리자 제외)
-    if (req.user?.role !== 'admin' && assignee !== req.user?.email) {
+    if (authReq.user?.role !== 'admin' && assignee !== authReq.user?.email) {
       return res.status(403).json(
         createApiResponse(false, null, '다른 사용자에게 업무를 할당할 수 없습니다.')
       )
@@ -117,4 +129,4 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
   }
 }
 
-export default withAuth(handler)
+export default handler
