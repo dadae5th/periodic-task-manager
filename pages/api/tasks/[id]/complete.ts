@@ -33,128 +33,14 @@ async function handler(
  * 이메일에서 GET 요청으로 완료 처리 (자동 로그인 포함)
  */
 async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse, id: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
+  
   try {
-    console.log('=== 이메일 완료 요청 디버깅 ===')
-    console.log('요청 시각:', new Date().toISOString())
-    console.log('HTTP Method:', req.method)
-    console.log('Full URL:', req.url)
-    console.log('전체 query 객체:', JSON.stringify(req.query, null, 2))
+    console.log('=== 이메일 완료 요청 시작 ===')
+    console.log('URL:', req.url)
+    console.log('Query:', req.query)
     
-    const { completed_by, auto_login, force_login, source, recipient } = req.query
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
-
-    console.log('추출된 파라미터:', { completed_by, auto_login, force_login, source, recipient })
-
-    // force_login이 true이면 무조건 자동 로그인 처리
-    if (force_login === 'true') {
-      console.log('🚀 강제 자동 로그인 모드 활성화')
-      
-      let assignee = completed_by as string || recipient as string
-      
-      console.log(`🔍 담당자 결정 과정:`, {
-        completed_by: completed_by,
-        recipient: recipient,
-        selectedAssignee: assignee
-      })
-      
-      // completed_by와 recipient 모두 없으면 업무의 assignee를 사용
-      if (!assignee || typeof assignee !== 'string') {
-        try {
-          console.log('🔄 업무 담당자 조회 시도...')
-          const { data: task, error: fetchError } = await (supabaseAdmin as any)
-            .from('tasks')
-            .select('assignee, title')
-            .eq('id', id)
-            .single()
-          
-          if (!fetchError && task && task.assignee) {
-            assignee = task.assignee
-            console.log(`✅ 업무 담당자 사용: ${assignee} (업무: ${task.title})`)
-          } else {
-            console.log('❌ 업무 담당자 조회 실패, 기본값 사용')
-            assignee = 'test@example.com'
-          }
-        } catch (error) {
-          console.error('❌ 업무 담당자 조회 예외:', error)
-          assignee = 'test@example.com'
-        }
-      }
-      
-      // 강제 자동 로그인으로 업무 완료 처리
-      console.log(`� 강제 자동 로그인으로 업무 완료 처리: ${assignee}`)
-      req.query.completed_by = assignee
-      req.query.auto_login = 'true'
-      
-      // 계속해서 처리...
-    }
-
-    const completed_by_final = req.query.completed_by as string
-
-    if (!completed_by_final || typeof completed_by_final !== 'string') {
-      console.error('❌ completed_by 파라미터 최종 확인 실패')
-      const errorMsg = `완료자 정보가 누락되었습니다. 디버깅 정보: URL=${req.url}, Query=${JSON.stringify(req.query, null, 2)}`
-      console.error('❌ 최종 에러:', errorMsg)
-      return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent(errorMsg)}`)
-    }
-
-    console.log('✅ completed_by 파라미터 최종 확인:', completed_by_final)
-
-    // 먼저 업무 완료 처리 수행
-    console.log('📋 업무 완료 처리 시작...')
-    
-    // 업무 정보 조회
-    const { data: taskData, error: taskFetchError } = await (supabaseAdmin as any)
-      .from('tasks')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (taskFetchError) {
-      console.error('업무 조회 실패:', taskFetchError)
-      if (taskFetchError.code === 'PGRST116') {
-        return res.redirect(302, `${appUrl}/dashboard?error=task_not_found`)
-      }
-      return res.redirect(302, `${appUrl}/dashboard?error=fetch_failed`)
-    }
-
-    if (taskData.completed) {
-      console.log('이미 완료된 업무')
-      return res.redirect(302, `${appUrl}/dashboard?message=already_completed`)
-    }
-
-    const taskCompletedAt = new Date().toISOString()
-
-    // 완료 기록 추가
-    const { data: taskCompletion, error: taskCompletionError } = await (supabaseAdmin as any)
-      .from('task_completions')
-      .insert([{
-        task_id: id,
-        completed_by: completed_by_final,
-        completed_at: taskCompletedAt
-      }])
-      .select()
-      .single()
-
-    if (taskCompletionError) {
-      console.error('완료 기록 생성 실패:', taskCompletionError)
-    }
-
-    // 업무 상태 업데이트
-    const { error: taskUpdateError } = await (supabaseAdmin as any)
-      .from('tasks')
-      .update({
-        completed: taskData.frequency === 'once' ? true : false,
-        updated_at: taskCompletedAt
-      })
-      .eq('id', id)
-
-    if (taskUpdateError) {
-      console.error('업무 업데이트 실패:', taskUpdateError)
-    } else {
-      console.log('✅ 업무 완료 처리 성공')
-    }
-
-    // 먼저 업무 정보 조회
+    // 1단계: 업무 조회 및 담당자 확인
     const { data: task, error: fetchError } = await (supabaseAdmin as any)
       .from('tasks')
       .select('*')
@@ -162,22 +48,28 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
       .single()
 
     if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
-        // 업무를 찾을 수 없는 경우 대시보드로 리다이렉트
-        return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?error=task_not_found`)
-      }
-      
       console.error('업무 조회 실패:', fetchError)
-      return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?error=fetch_failed`)
+      return res.redirect(302, `${appUrl}/dashboard?error=task_not_found`)
     }
 
-    if (task.completed) {
-      // 이미 완료된 업무인 경우 대시보드로 리다이렉트
-      return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?message=already_completed`)
+    if (task.completed && task.frequency === 'once') {
+      console.log('이미 완료된 업무')
+      return res.redirect(302, `${appUrl}/dashboard?message=already_completed`)
     }
 
+    // 2단계: 완료자 결정 (우선순위: completed_by → recipient → assignee)
+    const { completed_by, recipient } = req.query
+    const completedBy = (completed_by as string) || (recipient as string) || task.assignee
+
+    if (!completedBy) {
+      console.error('완료자 정보 없음')
+      return res.redirect(302, `${appUrl}/dashboard?error=no_assignee`)
+    }
+
+    console.log('완료자 결정:', completedBy)
+
+    // 3단계: 업무 완료 처리
     const completedAt = new Date().toISOString()
-    const completedBy = completed_by || task.assignee
 
     // 완료 기록 추가
     const { data: completion, error: completionError } = await (supabaseAdmin as any)
@@ -192,23 +84,27 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
 
     if (completionError) {
       console.error('완료 기록 생성 실패:', completionError)
-      return res.redirect(302, `${process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'}/dashboard?error=completion_failed`)
     }
 
-    // 업무 상태 업데이트 및 다음 마감일 계산
+    // 다음 마감일 계산 및 업무 상태 업데이트
     let nextDueDate: string
+    let isCompleted: boolean
 
     if (task.frequency === 'daily' || task.frequency === 'weekly' || task.frequency === 'monthly') {
+      // 주기적 업무: 다음 마감일 설정, 완료 상태는 false
       const nextDate = TaskScheduler.getNextScheduledDate(task, new Date())
       nextDueDate = nextDate.toISOString().split('T')[0]
+      isCompleted = false
     } else {
+      // 일회성 업무: 완료 상태로 변경
       nextDueDate = task.due_date
+      isCompleted = true
     }
 
     const { error: updateError } = await (supabaseAdmin as any)
       .from('tasks')
       .update({
-        completed: task.frequency === 'daily' || task.frequency === 'weekly' || task.frequency === 'monthly' ? false : true,
+        completed: isCompleted,
         due_date: nextDueDate,
         updated_at: completedAt
       })
@@ -216,33 +112,27 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
 
     if (updateError) {
       console.error('업무 업데이트 실패:', updateError)
-      await (supabaseAdmin as any)
-        .from('task_completions')
-        .delete()
-        .eq('id', completion.id)
-      
-      return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('업무 업데이트에 실패했습니다.')}`)
+    } else {
+      console.log('✅ 업무 완료 처리 성공')
     }
 
-    // 간소화된 자동 로그인 처리
-    console.log('🔄 자동 로그인 처리 시작:', { email: completed_by_final, task_id: id })
-    
+    // 4단계: 자동 로그인 및 대시보드 이동
     try {
-      // 사용자 정보 조회 또는 생성
+      // 사용자 조회 또는 생성
       let { data: user, error: userError } = await (supabaseAdmin as any)
         .from('users')
         .select('id, email, name, role')
-        .eq('email', completed_by_final)
+        .eq('email', completedBy)
         .single()
 
       // 사용자가 없으면 자동 생성
       if (userError && userError.code === 'PGRST116') {
-        console.log(`🆕 사용자 ${completed_by_final} 자동 생성`)
+        console.log(`새 사용자 생성: ${completedBy}`)
         const { data: newUser, error: createError } = await (supabaseAdmin as any)
           .from('users')
           .insert([{
-            email: completed_by_final,
-            name: completed_by_final.split('@')[0],
+            email: completedBy,
+            name: completedBy.split('@')[0],
             password: 'temp123',
             role: 'user'
           }])
@@ -250,37 +140,31 @@ async function handleCompleteFromEmail(req: NextApiRequest, res: NextApiResponse
           .single()
 
         if (createError) {
-          console.error('❌ 사용자 생성 실패:', createError)
-        } else {
-          user = newUser
-          console.log('✅ 새 사용자 생성 성공:', user)
+          console.error('사용자 생성 실패:', createError)
+          return res.redirect(302, `${appUrl}/dashboard?message=${encodeURIComponent('업무가 완료되었습니다. 로그인해주세요.')}`)
         }
+        user = newUser
       }
 
       if (!user) {
-        console.error('❌ 사용자 정보 없음')
-        throw new Error('사용자 정보를 찾을 수 없습니다')
+        return res.redirect(302, `${appUrl}/dashboard?message=${encodeURIComponent('업무가 완료되었습니다. 로그인해주세요.')}`)
       }
 
-      // 인증 토큰 생성
+      // 토큰 생성 및 대시보드로 이동
       const sessionToken = generateToken(user)
-      console.log('✅ 토큰 생성 성공')
-
-      // 토큰과 사용자 정보를 URL에 포함하여 대시보드로 바로 이동
-      const dashboardUrl = `${appUrl}/dashboard?auto_login=true&token=${encodeURIComponent(sessionToken)}&user=${encodeURIComponent(JSON.stringify(user))}&message=${encodeURIComponent('업무가 완료되었습니다!')}&completed_task=${id}`
+      const dashboardUrl = `${appUrl}/dashboard?auto_login=true&token=${encodeURIComponent(sessionToken)}&user=${encodeURIComponent(JSON.stringify(user))}&message=${encodeURIComponent('업무가 완료되었습니다!')}`
       
-      console.log('✅ 대시보드로 직접 리다이렉트:', dashboardUrl)
+      console.log('✅ 자동 로그인 성공, 대시보드로 이동')
       return res.redirect(302, dashboardUrl)
 
     } catch (error) {
-      console.error('❌ 자동 로그인 처리 오류:', error)
-      // 자동 로그인 실패시에도 업무는 이미 완료된 상태이므로 대시보드로 이동
-      return res.redirect(302, `${appUrl}/dashboard?message=${encodeURIComponent('업무가 완료되었습니다. 로그인이 필요합니다.')}&completed_task=${id}`)
+      console.error('자동 로그인 오류:', error)
+      return res.redirect(302, `${appUrl}/dashboard?message=${encodeURIComponent('업무가 완료되었습니다. 로그인해주세요.')}`)
     }
+
   } catch (error) {
-    console.error('업무 완료 처리 중 오류:', error)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://periodic-task-manager.vercel.app'
-    return res.redirect(302, `${appUrl}/login?error=${encodeURIComponent('업무 완료 처리 중 오류가 발생했습니다.')}`)
+    console.error('업무 완료 처리 오류:', error)
+    return res.redirect(302, `${appUrl}/dashboard?error=${encodeURIComponent('처리 중 오류가 발생했습니다.')}`)
   }
 }
 
