@@ -72,8 +72,8 @@ export default function Login() {
           localStorage.setItem('authToken', data.data.token)
           localStorage.setItem('currentUser', JSON.stringify(data.data.user))
           
-          // 리다이렉트 URL이 있으면 해당 페이지로, 없으면 대시보드로
-          const targetUrl = redirectUrl || '/dashboard'
+          // 리다이렉트 URL이 있으면 해당 페이지로, 없으면 사용자별 대시보드로
+          const targetUrl = redirectUrl || `/dashboard?user=${encodeURIComponent(userEmail)}`
           console.log('리다이렉트:', targetUrl)
           router.push(targetUrl)
           return
@@ -131,8 +131,9 @@ export default function Login() {
         localStorage.setItem('currentUser', JSON.stringify(result.data.user))
         localStorage.setItem('authToken', result.data.token)
         
-        // 대시보드로 리다이렉트
-        router.push('/dashboard')
+        // 사용자 이메일을 파라미터로 포함하여 대시보드로 리다이렉트
+        const userEmail = result.data.user.email
+        router.push(`/dashboard?user=${encodeURIComponent(userEmail)}`)
       } else {
         setError(result.error || (isLogin ? '로그인에 실패했습니다.' : '회원가입에 실패했습니다.'))
       }
@@ -274,14 +275,24 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="mt-6 text-center">
+              <div className="mt-6 text-center space-y-2">
                 <button
                   type="button"
                   onClick={toggleMode}
-                  className="text-blue-600 hover:text-blue-500 text-sm font-medium"
+                  className="text-blue-600 hover:text-blue-500 text-sm font-medium block w-full"
                 >
                   {isLogin ? '계정이 없으신가요? 회원가입' : '이미 계정이 있으신가요? 로그인'}
                 </button>
+                
+                {isLogin && (
+                  <button
+                    type="button"
+                    onClick={() => router.push('/forgot-password')}
+                    className="text-gray-600 hover:text-gray-500 text-sm block w-full"
+                  >
+                    비밀번호를 잊으셨나요?
+                  </button>
+                )}
               </div>
             </div>
 
