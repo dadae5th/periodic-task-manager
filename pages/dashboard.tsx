@@ -804,34 +804,39 @@ export default function Dashboard() {
                   업무 목록 ({tasks.length}개)
                 </h2>
                 <div className="flex items-center gap-2">
-                  {/* 다중 선택 모드 버튼들 */}
-                  {(() => {
-                    console.log('🔍 렌더링 상태:', { isSelectMode, selectedCount: selectedTasks.size });
-                    return null;
-                  })()}
-                  {isSelectMode ? (
+                  {/* 일괄삭제 버튼 - 항상 표시 */}
+                  <button
+                    onClick={toggleSelectMode}
+                    className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 border-2 border-orange-600"
+                    style={{ minWidth: '120px' }}
+                  >
+                    📋 일괄삭제
+                  </button>
+
+                  {/* 선택 모드일 때 추가 버튼들 */}
+                  {isSelectMode && (
                     <>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-gray-600 bg-yellow-100 px-2 py-1 rounded">
                         {selectedTasks.size}개 선택됨
                       </span>
                       <button
                         onClick={selectAllTasks}
                         className="px-3 py-1 bg-gray-500 text-white rounded text-sm font-medium hover:bg-gray-600"
                       >
-                        전체 선택
+                        전체선택
                       </button>
                       <button
                         onClick={deselectAllTasks}
                         className="px-3 py-1 bg-gray-400 text-white rounded text-sm font-medium hover:bg-gray-500"
                       >
-                        선택 해제
+                        선택해제
                       </button>
                       <button
                         onClick={bulkDeleteTasks}
                         disabled={selectedTasks.size === 0 || isBulkDeleting}
                         className="px-3 py-1 bg-red-500 text-white rounded text-sm font-medium hover:bg-red-600 disabled:opacity-50"
                       >
-                        {isBulkDeleting ? '삭제 중...' : `${selectedTasks.size}개 삭제`}
+                        {isBulkDeleting ? '삭제중...' : `${selectedTasks.size}개삭제`}
                       </button>
                       <button
                         onClick={toggleSelectMode}
@@ -840,40 +845,32 @@ export default function Dashboard() {
                         취소
                       </button>
                     </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={toggleSelectMode}
-                        className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 border-2 border-orange-600"
-                        style={{ minWidth: '120px' }}
-                      >
-                        📋 일괄삭제
-                      </button>
-                      <button
-                        onClick={loadInitialData}
-                        disabled={loading}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 disabled:opacity-50"
-                      >
-                        {loading ? '새로고침 중...' : '새로고침'}
-                      </button>
-                      
-                      {currentUser?.role === 'admin' && (
-                        <button
-                          onClick={() => router.push('/users')}
-                          className="px-4 py-2 bg-purple-500 text-white rounded-md text-sm font-medium hover:bg-purple-600 mr-2"
-                        >
-                          👥 사용자 관리
-                        </button>
-                      )}
-                      
-                      <button
-                        onClick={() => setShowAddModal(true)}
-                        className="px-4 py-2 bg-green-500 text-white rounded-md text-sm font-medium hover:bg-green-600"
-                      >
-                        + 업무 추가
-                      </button>
-                    </>
                   )}
+
+                  {/* 기본 버튼들 */}
+                  <button
+                    onClick={loadInitialData}
+                    disabled={loading}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 disabled:opacity-50"
+                  >
+                    {loading ? '새로고침 중...' : '새로고침'}
+                  </button>
+                  
+                  {currentUser?.role === 'admin' && (
+                    <button
+                      onClick={() => router.push('/users')}
+                      className="px-4 py-2 bg-purple-500 text-white rounded-md text-sm font-medium hover:bg-purple-600"
+                    >
+                      👥 사용자 관리
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => setShowAddModal(true)}
+                    className="px-4 py-2 bg-green-500 text-white rounded-md text-sm font-medium hover:bg-green-600"
+                  >
+                    + 업무 추가
+                  </button>
                 </div>
               </div>
               
