@@ -804,13 +804,17 @@ export default function Dashboard() {
                   업무 목록 ({tasks.length}개)
                 </h2>
                 <div className="flex items-center gap-2">
-                  {/* 일괄삭제 버튼 - 항상 표시 */}
+                  {/* 일괄삭제 버튼 - 강제로 맨 앞에 표시 */}
                   <button
-                    onClick={toggleSelectMode}
-                    className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 border-2 border-orange-600"
-                    style={{ minWidth: '120px' }}
+                    onClick={() => {
+                      console.log('🔥 일괄삭제 버튼 클릭!')
+                      alert('일괄삭제 모드 활성화!')
+                      toggleSelectMode()
+                    }}
+                    className="px-4 py-2 bg-red-500 text-white rounded-md text-sm font-medium hover:bg-red-600 border-4 border-yellow-400"
+                    style={{ minWidth: '140px', fontSize: '16px', fontWeight: 'bold' }}
                   >
-                    📋 일괄삭제
+                    �️ 일괄삭제
                   </button>
 
                   {/* 선택 모드일 때 추가 버튼들 */}
