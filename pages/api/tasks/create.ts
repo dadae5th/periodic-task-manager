@@ -16,7 +16,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     id: `user-${userEmail}`,
     email: userEmail,
     name: userEmail.split('@')[0],
-    role: 'admin' as const, // 모든 사용자를 admin으로 설정하여 권한 문제 방지
+    role: 'user' as const, // 개별 사용자로 설정
     created_at: new Date().toISOString()
   }
   
@@ -45,18 +45,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       )
     }
 
-    // 사용자는 자신의 이메일로만 업무를 생성할 수 있음 (관리자 제외)
-    if (authReq.user?.role !== 'admin' && assignee !== authReq.user?.email) {
-      return res.status(403).json(
-        createApiResponse(false, null, '다른 사용자에게 업무를 할당할 수 없습니다.')
-      )
-    }
+    // 업무는 항상 현재 사용자에게 할당됨
+    const finalAssignee = authReq.user?.email || assignee
 
     // 새 업무 생성
     const newTask = {
       title,
       description: description || null,
-      assignee,
+      assignee: finalAssignee, // 현재 사용자로 강제 할당
       frequency,
       frequency_details: {}, // 기본값
       due_date,

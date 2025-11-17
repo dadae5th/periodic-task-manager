@@ -44,13 +44,13 @@ async function handler(
   // URL이나 헤더에서 사용자 정보 추출
   const userEmail = req.headers['x-user-email'] as string || req.query.user as string || 'bae.jae.kwon@drbworld.com'
   
-  // 동적 사용자 설정
+  // 동적 사용자 설정 - 각 사용자는 자신의 업무만 볼 수 있음
   const isAdmin = userEmail === 'bae.jae.kwon@drbworld.com'
   const dynamicUser = {
     id: `user-${userEmail.replace(/[^a-zA-Z0-9]/g, '-')}`,
     email: userEmail,
     name: userEmail.split('@')[0],
-    role: isAdmin ? 'admin' as const : 'user' as const,
+    role: 'user' as const, // 모든 사용자를 일반 사용자로 설정하여 개별 대시보드 보장
     created_at: new Date().toISOString()
   }
   
@@ -78,12 +78,18 @@ async function handleGetTasks(req: AuthenticatedRequest, res: NextApiResponse) {
     const userEmail = req.user?.email
     let query = 'tasks?order=created_at.asc'
     
+    console.log(`📧 사용자: ${userEmail}, 역할: ${req.user?.role}`)
+    
     // 관리자는 모든 업무를 볼 수 있고, 일반 사용자는 자신의 업무만
     if (req.user?.role !== 'admin') {
       query += `&or=(assignee.eq.${encodeURIComponent(userEmail!)},assignee.eq.all)`
+      console.log(`🔒 일반 사용자 필터링 쿼리: ${query}`)
+    } else {
+      console.log(`👑 관리자 - 모든 업무 조회: ${query}`)
     }
     
     const allTasks = await callSupabaseAPI(query)
+    console.log(`📊 ${userEmail}의 업무 조회 결과: ${allTasks.length}개`)
     
     // 만료된 일회성 업무 필터링
     const tasks = filterExpiredOnceTasks(allTasks)

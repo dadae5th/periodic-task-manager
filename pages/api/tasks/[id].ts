@@ -8,15 +8,14 @@ async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // 인증 우회를 위한 동적 사용자 설정
+  // 인증 우회를 위한 동적 사용자 설정 - 사용자별 개별 데이터 보장
   const userEmail = req.headers['x-user-email'] as string || req.query.user as string || 'bae.jae.kwon@drbworld.com'
   
-  const isAdmin = userEmail === 'bae.jae.kwon@drbworld.com'
   const dynamicUser = {
     id: `user-${userEmail.replace(/[^a-zA-Z0-9]/g, '-')}`,
     email: userEmail,
     name: userEmail.split('@')[0],
-    role: isAdmin ? 'admin' as const : 'user' as const,
+    role: 'user' as const, // 모든 사용자를 일반 사용자로 설정하여 개별 데이터 보장
     created_at: new Date().toISOString()
   }
   

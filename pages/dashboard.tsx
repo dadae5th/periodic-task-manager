@@ -93,49 +93,55 @@ export default function Dashboard() {
       const urlParams = new URLSearchParams(window.location.search)
       const userParam = urlParams.get('user')
       
+      let targetUser: User
+      
       if (userParam) {
-        const mockUser: User = {
+        targetUser = {
           id: `user-${userParam}`,
           email: userParam,
           name: userParam.split('@')[0],
           role: 'admin',
           created_at: new Date().toISOString()
         }
-        setCurrentUser(mockUser)
+        setCurrentUser(targetUser)
         setNewTask(prev => ({ ...prev, assignee: userParam }))
       } else {
-        const defaultUser: User = {
+        targetUser = {
           id: 'default-user',
           email: 'bae.jae.kwon@drbworld.com',
           name: '배재권',
           role: 'admin',
           created_at: new Date().toISOString()
         }
-        setCurrentUser(defaultUser)
+        setCurrentUser(targetUser)
         setNewTask(prev => ({ ...prev, assignee: 'bae.jae.kwon@drbworld.com' }))
       }
       
-      await loadTasks()
+      // 사용자 정보를 직접 전달하여 업무 로드
+      await loadTasksForUser(targetUser.email)
     }
     
     initializeDashboard()
   }, [])
 
-  // 업무 목록 로드
-  const loadTasks = async () => {
+  // 특정 사용자의 업무 목록 로드
+  const loadTasksForUser = async (userEmail: string) => {
     try {
       setLoading(true)
       setError(null)
       
+      console.log(`${userEmail} 사용자의 업무를 로드합니다.`)
+      
       const headers = {
         'Content-Type': 'application/json',
-        'X-User-Email': currentUser?.email || 'bae.jae.kwon@drbworld.com'
+        'X-User-Email': userEmail
       }
       
       const response = await fetch('/api/tasks', { headers })
       const result: ApiResponse = await response.json()
       
       if (result.success && result.data?.tasks) {
+        console.log(`${userEmail}의 업무 ${result.data.tasks.length}개 로드됨`)
         setTasks(result.data.tasks)
         if (result.data.stats) {
           setStats(result.data.stats)
@@ -149,6 +155,12 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 현재 사용자의 업무 목록 로드
+  const loadTasks = async () => {
+    const userEmail = currentUser?.email || 'bae.jae.kwon@drbworld.com'
+    await loadTasksForUser(userEmail)
   }
 
   // 업무 삭제
