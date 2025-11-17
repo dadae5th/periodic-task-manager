@@ -93,6 +93,24 @@ export default function EmailDashboard({
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  onClick={() => {
+                    alert('일괄삭제 기능은 전체 대시보드에서 이용하세요!')
+                    window.location.href = '/dashboard'
+                  }}
+                  style={{
+                    background: '#ff6b35',
+                    color: 'white',
+                    border: '3px solid #ffd700',
+                    padding: '10px 20px',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🗑️ 일괄삭제
+                </button>
                 <a 
                   href="/dashboard"
                   style={{
