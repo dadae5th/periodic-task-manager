@@ -800,9 +800,18 @@ export default function Dashboard() {
           {!loading && !error && (
             <div className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h2 className="text-lg font-medium text-gray-900">
-                  업무 목록 ({tasks.length}개)
-                </h2>
+                <div className="flex items-center gap-4">
+                  <h2 className="text-lg font-medium text-gray-900">
+                    업무 목록 ({tasks.length}개)
+                  </h2>
+                  {/* 테스트용 버튼 */}
+                  <button 
+                    onClick={() => alert('테스트 버튼 작동!')}
+                    className="px-2 py-1 bg-yellow-500 text-black text-xs rounded"
+                  >
+                    TEST
+                  </button>
+                </div>
                 <div className="flex items-center gap-2">
                   {/* 일괄삭제 버튼 - 강제로 맨 앞에 표시 */}
                   <button
