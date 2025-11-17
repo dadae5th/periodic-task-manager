@@ -669,13 +669,68 @@ export default function Dashboard() {
       </Head>
 
       <div className="min-h-screen bg-gray-50">
+        {/* 플로팅 일괄삭제 버튼 */}
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 9999,
+          background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+          padding: '20px',
+          borderRadius: '20px',
+          border: '5px solid #fbbf24',
+          boxShadow: '0 10px 20px rgba(239, 68, 68, 0.5)',
+          cursor: 'pointer'
+        }}
+        onClick={() => {
+          alert('🗑️ 플로팅 일괄삭제 버튼 클릭됨!')
+          console.log('🚀 플로팅 버튼 작동!')
+          toggleSelectMode()
+        }}
+        >
+          <div style={{
+            color: 'white',
+            fontSize: '24px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            minWidth: '160px'
+          }}>
+            🗑️ 일괄삭제
+          </div>
+        </div>
+
         {/* 헤더 */}
         <header className="bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
-              <h1 className="text-2xl font-bold text-gray-900">
-                📋 업무 관리 대시보드
-              </h1>
+              <div className="flex items-center gap-4">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  📋 업무 관리 대시보드
+                </h1>
+                
+                {/* 고정 일괄삭제 버튼 */}
+                <button
+                  onClick={() => {
+                    alert('일괄삭제 기능 활성화!')
+                    console.log('헤더 일괄삭제 버튼 클릭됨')
+                    toggleSelectMode()
+                  }}
+                  style={{
+                    background: 'linear-gradient(45deg, #dc2626, #b91c1c)',
+                    color: 'white',
+                    border: '4px solid #fbbf24',
+                    padding: '12px 24px',
+                    borderRadius: '12px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 16px rgba(220, 38, 38, 0.4)',
+                    minWidth: '180px'
+                  }}
+                >
+                  DELETE 일괄삭제
+                </button>
+              </div>
               
               <div className="flex items-center space-x-4">
                 {/* 사용자 정보 */}
