@@ -623,6 +623,49 @@ export default function Dashboard() {
         <title>업무 관리 대시보드</title>
         <meta name="description" content="주기별 업무 관리 시스템" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        
+        {/* 일괄삭제 버튼 강제 삽입 스크립트 */}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            window.addEventListener('load', function() {
+              setTimeout(function() {
+                console.log('🔥 일괄삭제 버튼 강제 삽입 시작');
+                
+                // 버튼 그룹 찾기
+                const buttonContainer = document.querySelector('[class*="flex items-center gap-2"]');
+                if (buttonContainer && !document.getElementById('bulk-delete-btn')) {
+                  console.log('✅ 버튼 컨테이너 발견, 일괄삭제 버튼 삽입');
+                  
+                  const bulkDeleteBtn = document.createElement('button');
+                  bulkDeleteBtn.id = 'bulk-delete-btn';
+                  bulkDeleteBtn.innerHTML = '🗑️ 일괄삭제';
+                  bulkDeleteBtn.style.cssText = \`
+                    background: #dc3545;
+                    color: white;
+                    border: 4px solid #ffd700;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    margin-right: 10px;
+                    cursor: pointer;
+                    min-width: 140px;
+                  \`;
+                  
+                  bulkDeleteBtn.onclick = function() {
+                    alert('일괄삭제 기능 활성화됨!');
+                    console.log('🎯 일괄삭제 버튼 클릭됨');
+                  };
+                  
+                  buttonContainer.insertBefore(bulkDeleteBtn, buttonContainer.firstChild);
+                  console.log('🎉 일괄삭제 버튼 삽입 완료');
+                } else {
+                  console.log('❌ 버튼 컨테이너를 찾을 수 없음');
+                }
+              }, 1000);
+            });
+          `
+        }} />
       </Head>
 
       <div className="min-h-screen bg-gray-50">

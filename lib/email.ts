@@ -205,7 +205,7 @@ class EmailService {
                 <p style="color: #f0f0f0; margin: 0; font-size: 12px;">
                   개인 업무만 표시됩니다 | 사용자: ${recipient}<br>
                   <span style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 5px; font-family: monospace;">
-                    ${appUrl}/dashboard?user=${encodeURIComponent(recipient)}
+                    ${appUrl}/dashboard?user=${recipient}
                   </span>
                 </p>
             </div>
