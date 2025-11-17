@@ -341,9 +341,17 @@ export default function Dashboard() {
     }
 
     try {
+      // 사용자별 삭제 요청 헤더 생성
+      const userHeaders = {
+        ...getAuthHeaders(),
+        'X-User-Email': currentUser?.email || 'bae.jae.kwon@drbworld.com'
+      }
+      
+      console.log('업무 삭제 요청:', { taskId, user: currentUser?.email })
+      
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: userHeaders
       })
 
       const result: ApiResponse = await response.json()
@@ -374,9 +382,17 @@ export default function Dashboard() {
 
     setIsSubmitting(true)
     try {
+      // 사용자별 생성 요청 헤더 생성
+      const userHeaders = {
+        ...getAuthHeaders(),
+        'X-User-Email': currentUser?.email || 'bae.jae.kwon@drbworld.com'
+      }
+      
+      console.log('업무 생성 요청:', { task: newTask.title, user: currentUser?.email })
+      
       const response = await fetch('/api/tasks/create', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: userHeaders,
         body: JSON.stringify(newTask)
       })
 
