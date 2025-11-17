@@ -8,18 +8,21 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // 인증 우회를 위한 기본 사용자 설정
-  const defaultUser = {
-    id: 'default-user',
-    email: 'bae.jae.kwon@drbworld.com',
-    name: '배재권',
-    role: 'admin' as const,
+  // 헤더에서 사용자 정보 가져오기
+  const userEmail = req.headers['x-user-email'] as string || 'bae.jae.kwon@drbworld.com'
+  
+  // 동적 사용자 설정
+  const dynamicUser = {
+    id: `user-${userEmail}`,
+    email: userEmail,
+    name: userEmail.split('@')[0],
+    role: 'admin' as const, // 모든 사용자를 admin으로 설정하여 권한 문제 방지
     created_at: new Date().toISOString()
   }
   
   // req에 사용자 정보 추가
   const authReq = req as AuthenticatedRequest
-  authReq.user = defaultUser
+  authReq.user = dynamicUser
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
     return res.status(405).json(createApiResponse(false, null, '허용되지 않는 메서드'))
