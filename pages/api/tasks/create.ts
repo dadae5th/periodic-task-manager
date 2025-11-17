@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { withAuth, AuthenticatedRequest } from '@/lib/auth'
 import { createApiResponse } from '@/lib/utils'
+import { isDueTodayKST } from '@/lib/kst-utils'
 
 // SSL 인증서 검증 우회 설정 (개발 환경용)
 if (process.env.NODE_ENV === 'development') {
@@ -94,13 +95,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const { getEmailService } = await import('@/lib/email')
       const emailService = getEmailService()
       
-      // 오늘 마감인 업무인지 확인하여 이메일 발송
-      const taskDueDate = new Date(createdTask.due_date)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      taskDueDate.setHours(0, 0, 0, 0)
-      
-      if (taskDueDate.getTime() === today.getTime()) {
+      // 오늘 마감인 업무인지 확인하여 이메일 발송 (한국 시간 기준)
+      if (isDueTodayKST(createdTask.due_date)) {
         // 오늘 마감인 경우만 즉시 이메일 발송
         await emailService.sendDailyTaskEmail(
           createdTask.assignee,

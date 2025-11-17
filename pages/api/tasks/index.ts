@@ -3,6 +3,7 @@ import { createApiResponse, getToday } from '@/lib/utils'
 import { filterExpiredOnceTasks } from '@/lib/scheduler'
 import { withAuth, AuthenticatedRequest } from '@/lib/auth'
 import { Task } from '@/types'
+import { getKSTToday, getKSTDate, isOverdueKST } from '@/lib/kst-utils'
 
 // SSL 인증서 검증 우회 설정 (개발 환경용)
 if (process.env.NODE_ENV === 'development') {
@@ -96,19 +97,19 @@ async function handleGetTasks(req: AuthenticatedRequest, res: NextApiResponse) {
     
     console.log(`총 ${allTasks.length}개 업무 조회됨 (필터링 후: ${tasks.length}개)`)
 
-    // 기본 통계 계산
-    const now = new Date()
-    const today = now.toISOString().split('T')[0]
+    // 기본 통계 계산 (한국 시간 기준)
+    const now = getKSTDate()
+    const today = getKSTToday()
     
     const totalTasks = tasks.length
     const overdueTasks = tasks.filter((task: Task) => 
-      !task.completed && new Date(task.due_date) < now
+      !task.completed && isOverdueKST(task.due_date)
     ).length
     const pendingTasks = tasks.filter((task: Task) => !task.completed).length
     
     // 오늘 완료된 업무 수
     const completedToday = tasks.filter((task: Task) => {
-      const completedDate = task.updated_at ? new Date(task.updated_at).toISOString().split('T')[0] : null
+      const completedDate = task.updated_at ? getKSTDate(task.updated_at).toISOString().split('T')[0] : null
       return task.completed && completedDate === today
     }).length
 

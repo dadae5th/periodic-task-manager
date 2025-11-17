@@ -1,4 +1,5 @@
 import { Task, FrequencyDetails } from '@/types'
+import { getKSTDate, isOverdueKST, isDueTodayKST } from './kst-utils'
 
 /**
  * 주기별 업무 스케줄링 유틸리티
@@ -381,13 +382,13 @@ export class TaskScheduler {
 }
 
 /**
- * 현재 시간 기준 오늘 해야할 일과 지연된 업무 가져오기
+ * 현재 시간 기준 오늘 해야할 일과 지연된 업무 가져오기 (한국 시간 기준)
  */
 export function getTodayTasksAndOverdue(tasks: Task[]): {
   todayTasks: Task[]
   overdueTasks: Task[]
 } {
-  const today = new Date()
+  const today = getKSTDate() // 한국 시간 사용
   
   // 오늘 해야할 일
   const todayTasks = TaskScheduler.getTasksForDate(
@@ -395,8 +396,14 @@ export function getTodayTasksAndOverdue(tasks: Task[]): {
     today
   )
 
-  // 지연된 업무
-  const overdueTasks = TaskScheduler.getOverdueTasks(tasks, today)
+  // 지연된 업무 (한국 시간 기준)
+  const overdueTasks = tasks
+    .filter(task => !task.completed)
+    .filter(task => isOverdueKST(task.due_date))
+    .map(task => ({
+      ...task,
+      is_overdue: true
+    }))
 
   return { todayTasks, overdueTasks }
 }
@@ -506,12 +513,9 @@ function getWeekEnd(date: Date): Date {
 }
 
 /**
- * 만료된 일회성 업무 필터링 (마감일이 지난 일회성 업무 제외)
+ * 만료된 일회성 업무 필터링 (마감일이 지난 일회성 업무 제외) - 한국 시간 기준
  */
 export function filterExpiredOnceTasks(tasks: Task[]): Task[] {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0) // 시간을 00:00:00으로 설정
-  
   return tasks.filter(task => {
     // 일회성 업무가 아니면 통과
     if (task.frequency !== 'once') {
@@ -523,12 +527,8 @@ export function filterExpiredOnceTasks(tasks: Task[]): Task[] {
       return true
     }
     
-    // 일회성 업무이고 미완료인 경우, 마감일 확인
-    const dueDate = new Date(task.due_date)
-    dueDate.setHours(0, 0, 0, 0) // 시간을 00:00:00으로 설정
-    
-    // 마감일이 오늘 이후거나 오늘인 경우에만 통과
-    return dueDate >= today
+    // 일회성 업무이고 미완료인 경우, 마감일 확인 (한국 시간 기준)
+    return !isOverdueKST(task.due_date)
   })
 }
 

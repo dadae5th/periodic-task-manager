@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer'
 import { Task, EmailResult } from '@/types'
+import { formatKSTDate, formatKSTDateWithWeekday } from './kst-utils'
 
 interface EmailConfig {
   service: string
@@ -51,7 +52,7 @@ class EmailService {
       const mailOptions = {
         from: `"${this.config.fromName}" <${this.config.user}>`,
         to: recipient,
-        subject: `📋 [업데이트됨] 오늘의 업무 알림 - ${new Date().toLocaleDateString('ko-KR')}`,
+        subject: `📋 [업데이트됨] 오늘의 업무 알림 - ${formatKSTDate(new Date())}`,
         html: htmlContent,
         text: textContent,
       }
@@ -104,7 +105,7 @@ class EmailService {
           <div style="background: #fff5f5; border: 1px solid #fed7d7; border-radius: 5px; padding: 15px; margin: 10px 0;">
             <h4 style="margin: 0 0 10px 0; color: #dc3545;">🚨 ${task.title}</h4>
             <p style="color: #666; margin: 5px 0;">담당자: ${assignee}</p>
-            <p style="color: #dc3545; margin: 5px 0; font-weight: bold;">마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')} (지연됨)</p>
+            <p style="color: #dc3545; margin: 5px 0; font-weight: bold;">마감: ${formatKSTDate(task.due_date)} (지연됨)</p>
             <p style="color: #666; margin: 5px 0; font-size: 14px;">${task.description || '설명 없음'}</p>
             <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
               <p style="margin: 0; color: #666; font-size: 12px;">⚠️ 지연된 업무입니다. 대시보드에서 완료 처리하세요.</p>
@@ -138,7 +139,7 @@ class EmailService {
           <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0;">
             <h4 style="margin: 0 0 10px 0; color: #007bff;">📅 ${task.title}</h4>
             <p style="color: #666; margin: 5px 0;">담당자: ${assignee}</p>
-            <p style="color: #666; margin: 5px 0;">마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')}</p>
+            <p style="color: #666; margin: 5px 0;">마감: ${formatKSTDate(task.due_date)}</p>
             <p style="color: #666; margin: 5px 0; font-size: 14px;">${task.description || '설명 없음'}</p>
             <div style="margin-top: 10px; padding: 10px; background: #e3f2fd; border-radius: 4px;">
               <p style="margin: 0; color: #1976d2; font-size: 12px;">💡 대시보드에서 완료 처리하세요.</p>
@@ -183,9 +184,9 @@ class EmailService {
     <div class="container">
         <div class="header">
             <h1>📋 오늘의 업무 알림</h1>
-            <p>${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p>
+            <p>${formatKSTDateWithWeekday()}</p>
             <p style="background: #ff6b6b; color: white; padding: 10px; border-radius: 5px; font-size: 14px; font-weight: bold;">
-              🔥 완료 버튼 제거 완료! - ${new Date().toLocaleString('ko-KR')} 버전
+              🔥 완료 버튼 제거 완료! - ${formatKSTDateWithWeekday()} 버전
             </p>
         </div>
         
@@ -225,12 +226,12 @@ class EmailService {
    */
   private generateSimpleEmailText(tasks: Task[], overdueTasks: Task[]): string {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    let content = `📋 오늘의 업무 알림\n${new Date().toLocaleDateString('ko-KR')}\n\n`
+    let content = `📋 오늘의 업무 알림\n${formatKSTDateWithWeekday()}\n\n`
 
     if (overdueTasks.length > 0) {
       content += `🚨 지연된 업무 (${overdueTasks.length}개):\n`
       overdueTasks.forEach(task => {
-        content += `- ${task.title} (담당: ${task.assignee}, 마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')})\n`
+        content += `- ${task.title} (담당: ${task.assignee}, 마감: ${formatKSTDate(task.due_date)})\n`
       })
       content += '\n'
     }
@@ -238,7 +239,7 @@ class EmailService {
     if (tasks.length > 0) {
       content += `📅 오늘 해야할 일 (${tasks.length}개):\n`
       tasks.forEach(task => {
-        content += `- ${task.title} (담당: ${task.assignee}, 마감: ${new Date(task.due_date).toLocaleDateString('ko-KR')})\n`
+        content += `- ${task.title} (담당: ${task.assignee}, 마감: ${formatKSTDate(task.due_date)})\n`
       })
     } else if (overdueTasks.length === 0) {
       content += '🎉 오늘 할 일이 없습니다!\n'

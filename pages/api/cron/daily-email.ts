@@ -4,6 +4,7 @@ import { createApiResponse, getToday } from '@/lib/utils'
 import { getEmailService } from '@/lib/email'
 import { getTodayTasksAndOverdue } from '@/lib/scheduler'
 import { Task } from '@/types'
+import { getKSTDate, getKSTToday, isOverdueKST, isDueTodayKST } from '@/lib/kst-utils'
 
 export default async function handler(
   req: NextApiRequest,
@@ -37,12 +38,12 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
     console.log(`[CRON] 일일 이메일 발송 시작: ${new Date().toLocaleString('ko-KR')}`)
 
     // 1. 현재 시간 확인 (한국 시간 기준)
-    const now = getToday()
+    const now = getKSTDate() // 한국 시간 사용
     const currentHour = now.getHours()
     const currentMinute = now.getMinutes()
     const currentTime = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`
 
-    // 2. 주말 체크 - 토요일(6), 일요일(0)에는 발송하지 않음
+    // 2. 주말 체크 - 토요일(6), 일요일(0)에는 발송하지 않음 (한국 시간 기준)
     const dayOfWeek = now.getDay() // 0: 일요일, 6: 토요일
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 

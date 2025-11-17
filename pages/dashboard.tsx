@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { Task, ApiResponse, User } from '@/types'
+import { formatKSTDate, calculateKSTDDay, isOverdueKST, getKSTToday } from '@/lib/kst-utils'
 
 interface DashboardStats {
   total_tasks: number
@@ -21,20 +22,13 @@ interface NewTask {
   due_date: string
 }
 
-// 유틸리티 함수들
+// 유틸리티 함수들 (한국 시간 기준)
 const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('ko-KR')
+  return formatKSTDate(dateString)
 }
 
 const formatDDay = (dateString: string): string => {
-  const today = new Date()
-  const dueDate = new Date(dateString)
-  const diffTime = dueDate.getTime() - today.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  
-  if (diffDays === 0) return 'D-Day'
-  if (diffDays > 0) return `D-${diffDays}`
-  return `D+${Math.abs(diffDays)}`
+  return calculateKSTDDay(dateString)
 }
 
 const getFrequencyDescription = (frequency: string): string => {
@@ -75,7 +69,7 @@ export default function Dashboard() {
     description: '',
     assignee: '',
     frequency: 'once',
-    due_date: new Date().toISOString().split('T')[0]
+    due_date: getKSTToday()
   })
 
   // 초기 데이터 로드
@@ -320,7 +314,7 @@ export default function Dashboard() {
           description: '',
           assignee: currentUser?.email || 'bae.jae.kwon@drbworld.com',
           frequency: 'once',
-          due_date: new Date().toISOString().split('T')[0]
+          due_date: getKSTToday()
         })
         setShowAddModal(false)
         await loadTasks()
@@ -560,7 +554,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   filteredTasks.map((task) => {
-                    const isOverdue = task.due_date ? new Date(task.due_date) < new Date() : false
+                    const isOverdue = task.due_date ? isOverdueKST(task.due_date) : false
                     
                     return (
                       <div

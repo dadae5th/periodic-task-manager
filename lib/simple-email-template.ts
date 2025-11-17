@@ -1,4 +1,5 @@
 import { Task } from '@/types'
+import { formatKSTDateWithWeekday, formatKSTDate, formatKSTDateTime } from './kst-utils'
 
 /**
  * 비밀번호 재설정 이메일 템플릿
@@ -213,7 +214,7 @@ export function generatePasswordResetSuccessEmailTemplate(userEmail: string): st
             <p>이 이메일은 자동으로 발송되었습니다.</p>
             <p>업무 관리 시스템 | <a href="${appUrl}/dashboard">대시보드 바로가기</a></p>
             <p style="font-size: 12px; margin-top: 10px;">
-                ${new Date().toLocaleString('ko-KR')}
+                ${formatKSTDateTime(new Date())}
             </p>
         </div>
     </div>
@@ -320,12 +321,7 @@ export function generateSimpleEmailTemplate(tasks: Task[], overdueTasks: Task[])
     <div class="container">
         <div class="header">
             <h1>📋 오늘의 업무 알림</h1>
-            <p>${new Date().toLocaleDateString('ko-KR', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric',
-              weekday: 'long'
-            })}</p>
+            <p>${formatKSTDateWithWeekday()}</p>
         </div>
         
         <div class="content">
@@ -341,7 +337,7 @@ export function generateSimpleEmailTemplate(tasks: Task[], overdueTasks: Task[])
                     <div class="task-title">${task.title}</div>
                     <div class="task-meta">
                         담당자: ${task.assignee} | 
-                        마감일: ${new Date(task.due_date).toLocaleDateString('ko-KR')} |
+                        마감일: ${formatKSTDate(task.due_date)} |
                         지연: ${Math.ceil((Date.now() - new Date(task.due_date).getTime()) / (1000 * 60 * 60 * 24))}일
                     </div>
                     ${task.description ? `<p style="margin: 5px 0; color: #666;">${task.description}</p>` : ''}
@@ -361,7 +357,7 @@ export function generateSimpleEmailTemplate(tasks: Task[], overdueTasks: Task[])
                     <div class="task-title">${task.title}</div>
                     <div class="task-meta">
                         담당자: ${task.assignee} | 
-                        마감일: ${new Date(task.due_date).toLocaleDateString('ko-KR')}
+                        마감일: ${formatKSTDate(task.due_date)}
                     </div>
                     ${task.description ? `<p style="margin: 5px 0; color: #666;">${task.description}</p>` : ''}
                     <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-top: 10px;">
