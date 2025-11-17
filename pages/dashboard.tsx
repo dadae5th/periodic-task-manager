@@ -67,6 +67,11 @@ export default function Dashboard() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [viewMode, setViewMode] = useState<'active' | 'all'>('active')
+  
+  // 다중 선택 삭제 관련 state
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
+  const [isSelectMode, setIsSelectMode] = useState(false)
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   // URL 파라미터에서 초기 탭 설정
   useEffect(() => {
@@ -380,6 +385,88 @@ export default function Dashboard() {
     } catch (error) {
       console.error('업무 삭제 실패:', error)
       alert('업무 삭제 중 오류가 발생했습니다.')
+    }
+  }
+
+  // 다중 선택 관련 함수들
+  const toggleSelectMode = () => {
+    setIsSelectMode(!isSelectMode)
+    setSelectedTasks(new Set())
+  }
+
+  const toggleTaskSelection = (taskId: string) => {
+    const newSelected = new Set(selectedTasks)
+    if (newSelected.has(taskId)) {
+      newSelected.delete(taskId)
+    } else {
+      newSelected.add(taskId)
+    }
+    setSelectedTasks(newSelected)
+  }
+
+  const selectAllTasks = () => {
+    const safeTasks = Array.isArray(tasks) ? tasks : []
+    const safeCompletedIds = completedTaskIds instanceof Set ? completedTaskIds : new Set()
+    
+    const filteredTasks = viewMode === 'active' 
+      ? safeTasks.filter(task => task && !task.completed && !safeCompletedIds.has(task.id))
+      : safeTasks
+
+    const allTaskIds = filteredTasks.map(task => task.id)
+    setSelectedTasks(new Set(allTaskIds))
+  }
+
+  const deselectAllTasks = () => {
+    setSelectedTasks(new Set())
+  }
+
+  const bulkDeleteTasks = async () => {
+    if (selectedTasks.size === 0) {
+      alert('삭제할 업무를 선택해주세요.')
+      return
+    }
+
+    if (!confirm(`선택한 ${selectedTasks.size}개의 업무를 모두 삭제하시겠습니까?`)) {
+      return
+    }
+
+    setIsBulkDeleting(true)
+    
+    try {
+      const userHeaders = {
+        'Content-Type': 'application/json',
+        'X-User-Email': currentUser?.email || 'bae.jae.kwon@drbworld.com'
+      }
+
+      const deletePromises = Array.from(selectedTasks).map(taskId =>
+        fetch(`/api/tasks/${taskId}`, {
+          method: 'DELETE',
+          headers: userHeaders
+        })
+      )
+
+      const responses = await Promise.all(deletePromises)
+      const results = await Promise.all(responses.map(res => res.json()))
+      
+      const successCount = results.filter(result => result.success).length
+      const failCount = results.length - successCount
+
+      if (failCount === 0) {
+        alert(`${successCount}개의 업무가 모두 삭제되었습니다.`)
+      } else {
+        alert(`${successCount}개 성공, ${failCount}개 실패했습니다.`)
+      }
+
+      // 상태 초기화
+      setSelectedTasks(new Set())
+      setIsSelectMode(false)
+      await loadInitialData()
+
+    } catch (error) {
+      console.error('일괄 삭제 실패:', error)
+      alert('일괄 삭제 중 오류가 발생했습니다.')
+    } finally {
+      setIsBulkDeleting(false)
     }
   }
 
@@ -716,29 +803,71 @@ export default function Dashboard() {
                   업무 목록 ({tasks.length}개)
                 </h2>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={loadInitialData}
-                    disabled={loading}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 disabled:opacity-50"
-                  >
-                    {loading ? '새로고침 중...' : '새로고침'}
-                  </button>
-                  
-                  {currentUser?.role === 'admin' && (
-                    <button
-                      onClick={() => router.push('/users')}
-                      className="px-4 py-2 bg-purple-500 text-white rounded-md text-sm font-medium hover:bg-purple-600 mr-2"
-                    >
-                      👥 사용자 관리
-                    </button>
+                  {/* 다중 선택 모드 버튼들 */}
+                  {isSelectMode ? (
+                    <>
+                      <span className="text-sm text-gray-600">
+                        {selectedTasks.size}개 선택됨
+                      </span>
+                      <button
+                        onClick={selectAllTasks}
+                        className="px-3 py-1 bg-gray-500 text-white rounded text-sm font-medium hover:bg-gray-600"
+                      >
+                        전체 선택
+                      </button>
+                      <button
+                        onClick={deselectAllTasks}
+                        className="px-3 py-1 bg-gray-400 text-white rounded text-sm font-medium hover:bg-gray-500"
+                      >
+                        선택 해제
+                      </button>
+                      <button
+                        onClick={bulkDeleteTasks}
+                        disabled={selectedTasks.size === 0 || isBulkDeleting}
+                        className="px-3 py-1 bg-red-500 text-white rounded text-sm font-medium hover:bg-red-600 disabled:opacity-50"
+                      >
+                        {isBulkDeleting ? '삭제 중...' : `${selectedTasks.size}개 삭제`}
+                      </button>
+                      <button
+                        onClick={toggleSelectMode}
+                        className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm font-medium hover:bg-gray-400"
+                      >
+                        취소
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={toggleSelectMode}
+                        className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600"
+                      >
+                        📋 일괄 삭제
+                      </button>
+                      <button
+                        onClick={loadInitialData}
+                        disabled={loading}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 disabled:opacity-50"
+                      >
+                        {loading ? '새로고침 중...' : '새로고침'}
+                      </button>
+                      
+                      {currentUser?.role === 'admin' && (
+                        <button
+                          onClick={() => router.push('/users')}
+                          className="px-4 py-2 bg-purple-500 text-white rounded-md text-sm font-medium hover:bg-purple-600 mr-2"
+                        >
+                          👥 사용자 관리
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={() => setShowAddModal(true)}
+                        className="px-4 py-2 bg-green-500 text-white rounded-md text-sm font-medium hover:bg-green-600"
+                      >
+                        + 업무 추가
+                      </button>
+                    </>
                   )}
-                  
-                  <button
-                    onClick={() => setShowAddModal(true)}
-                    className="px-4 py-2 bg-green-500 text-white rounded-md text-sm font-medium hover:bg-green-600"
-                  >
-                    + 업무 추가
-                  </button>
                 </div>
               </div>
               
@@ -806,6 +935,18 @@ export default function Dashboard() {
                           }`}
                         >
                         <div className="flex items-center justify-between">
+                          {/* 체크박스 (선택 모드일 때만 표시) */}
+                          {isSelectMode && (
+                            <div className="flex-shrink-0 mr-4">
+                              <input
+                                type="checkbox"
+                                checked={selectedTasks.has(task.id)}
+                                onChange={() => toggleTaskSelection(task.id)}
+                                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                            </div>
+                          )}
+                          
                           <div className="flex-1">
                             <div className="flex items-center gap-3">
                               <h3 className="text-sm font-medium text-gray-900">
