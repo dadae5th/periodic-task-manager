@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { Task, ApiResponse, User } from '@/types'
-import { getCurrentUser, logout, getAuthHeaders } from '@/lib/auth'
+import { getCurrentUser, logout } from '@/lib/auth'
 
 interface DashboardStats {
   total_tasks: number
