@@ -390,6 +390,7 @@ export default function Dashboard() {
 
   // 다중 선택 관련 함수들
   const toggleSelectMode = () => {
+    console.log('🔄 선택 모드 전환:', !isSelectMode)
     setIsSelectMode(!isSelectMode)
     setSelectedTasks(new Set())
   }
@@ -804,6 +805,10 @@ export default function Dashboard() {
                 </h2>
                 <div className="flex items-center gap-2">
                   {/* 다중 선택 모드 버튼들 */}
+                  {(() => {
+                    console.log('🔍 렌더링 상태:', { isSelectMode, selectedCount: selectedTasks.size });
+                    return null;
+                  })()}
                   {isSelectMode ? (
                     <>
                       <span className="text-sm text-gray-600">
@@ -839,9 +844,10 @@ export default function Dashboard() {
                     <>
                       <button
                         onClick={toggleSelectMode}
-                        className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600"
+                        className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 border-2 border-orange-600"
+                        style={{ minWidth: '120px' }}
                       >
-                        📋 일괄 삭제
+                        📋 일괄삭제
                       </button>
                       <button
                         onClick={loadInitialData}
