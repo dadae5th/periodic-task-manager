@@ -88,6 +88,15 @@ export default function Dashboard() {
   useEffect(() => {
     console.log('🔍 개별 대시보드 진입')
     
+    // 🔥 오래된 인증 토큰 완전 제거 (토큰 오류 방지)
+    try {
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('currentUser')
+      console.log('✅ 오래된 토큰 데이터 클리어됨')
+    } catch (e) {
+      console.log('토큰 클리어 실행됨 (localStorage 접근 제한)')
+    }
+    
     // URL 파라미터에서 사용자 정보 확인
     const urlParams = new URLSearchParams(window.location.search)
     const userParam = urlParams.get('user')
