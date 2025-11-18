@@ -267,10 +267,14 @@ export default function Dashboard() {
         'X-User-Email': currentUser?.email || 'bae.jae.kwon@drbworld.com'
       }
       
-      const response = await fetch(`/api/tasks/${taskId}/complete`, {
-        method: 'POST',
+      // PUT 메서드로 completed 필드만 업데이트
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PUT',
         headers,
-        body: JSON.stringify({ completed_by: completedBy })
+        body: JSON.stringify({ 
+          completed: true,
+          completed_by: completedBy 
+        })
       })
       
       const result: ApiResponse = await response.json()
