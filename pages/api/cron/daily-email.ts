@@ -63,10 +63,11 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
       )
     }
 
-    // 4. 모든 업무 조회
+    // 4. 완료되지 않은 업무만 조회
     const { data: allTasks, error: tasksError } = await supabaseAdmin
       .from('tasks')
       .select('*')
+      .eq('completed', false)  // 완료되지 않은 업무만
       .order('due_date', { ascending: true })
 
     if (tasksError) {
