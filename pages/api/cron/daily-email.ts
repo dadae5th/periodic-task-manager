@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createApiResponse, getToday } from '@/lib/utils'
 import { getEmailService } from '@/lib/email'
-import { getTodayTasksAndOverdue } from '@/lib/scheduler'
+import { getTodayTasksAndOverdue, filterExpiredOnceTasks } from '@/lib/scheduler'
 import { Task } from '@/types'
 import { getKSTDate, getKSTToday, isOverdueKST, isDueTodayKST } from '@/lib/kst-utils'
 
@@ -77,7 +77,10 @@ async function handleDailyCron(req: NextApiRequest, res: NextApiResponse) {
       )
     }
 
-    const tasks = allTasks || []
+    // 만료된 일회성 업무 제거 (마감일이 지난 once 업무는 제외)
+    const tasks = filterExpiredOnceTasks(allTasks || [])
+    console.log(`[CRON] 업무 조회: 전체 ${allTasks?.length || 0}개, 유효 ${tasks.length}개 (만료된 일회성 업무 제외)`)
+    
     const { todayTasks, overdueTasks } = getTodayTasksAndOverdue(tasks)
 
     // 3. 발송할 업무가 없는 경우 조기 종료
